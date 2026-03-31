@@ -1,0 +1,4047 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>軽量MIDI学習シンセ v2</title>
+  <style>
+    :root {
+      --bg: #020617;
+      --panel: #0f172a;
+      --panel2: #111827;
+      --line: #334155;
+      --text: #e5e7eb;
+      --muted: #94a3b8;
+      --accent: #22c55e;
+      --accent2: #38bdf8;
+      --warn: #f59e0b;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: linear-gradient(180deg, #020617 0%, #0b1220 100%);
+      color: var(--text);
+    }
+    .app {
+      max-width: 1320px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    .hero h1 {
+      margin: 0 0 8px;
+      font-size: 2rem;
+    }
+    .hero p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.7;
+    }
+    .panel {
+      background: rgba(15, 23, 42, 0.95);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 16px;
+      margin-top: 16px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
+    }
+    label {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    label span, .small-label, .status-grid strong {
+      font-size: 0.92rem;
+      color: var(--muted);
+    }
+    input[type="file"], select, input[type="range"], button {
+      width: 100%;
+    }
+    input[type="file"], select {
+      background: #020617;
+      color: var(--text);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 10px 12px;
+    }
+    button {
+      border: none;
+      border-radius: 10px;
+      padding: 12px 14px;
+      font-weight: 700;
+      cursor: pointer;
+      background: var(--accent);
+      color: #04220f;
+    }
+    button.secondary {
+      background: var(--accent2);
+      color: #031620;
+    }
+    button.ghost {
+      background: #1e293b;
+      color: var(--text);
+      border: 1px solid var(--line);
+    }
+    button:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+    .actions {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      gap: 12px;
+      margin-top: 14px;
+    }
+    .status-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 12px;
+      margin-top: 14px;
+    }
+    .status-grid > div {
+      background: #020617;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 10px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      min-height: 72px;
+    }
+    .canvas-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    .canvas-grid-3 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 16px;
+    }
+    canvas {
+      width: 100%;
+      height: auto;
+      background: #020617;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      display: block;
+    }
+    .canvas-card h3, .learn-grid h3 {
+      margin: 0 0 10px;
+      font-size: 1.05rem;
+    }
+    .two-col {
+      display: grid;
+      grid-template-columns: 1.1fr 1fr;
+      gap: 16px;
+    }
+    .learn-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    pre {
+      margin: 0;
+      padding: 14px;
+      white-space: pre-wrap;
+      overflow-x: auto;
+      background: #020617;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      color: #bfdbfe;
+      line-height: 1.7;
+    }
+    ul {
+      margin: 0;
+      padding-left: 1.2rem;
+      color: var(--muted);
+      line-height: 1.8;
+    }
+    .hint {
+      color: var(--muted);
+      line-height: 1.7;
+      margin: 10px 0 0;
+    }
+    .seek-wrap {
+      margin-top: 14px;
+    }
+    .mono {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+    .badge {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: rgba(56, 189, 248, 0.12);
+      border: 1px solid #164e63;
+      color: #bae6fd;
+      font-size: 0.82rem;
+      margin-left: 8px;
+    }
+    .control-value {
+      font-size: 0.85rem;
+      color: #bfdbfe;
+      margin-left: 8px;
+    }
+    .subgrid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+      margin-top: 12px;
+    }
+    .tiny-note {
+      margin-top: 8px;
+      color: var(--muted);
+      line-height: 1.6;
+      font-size: 0.92rem;
+    }
+
+    .piano-roll-note {
+      color: var(--muted);
+    }
+    .keyboard-panel-note {
+      margin-bottom: 10px;
+    }
+    .mini-keyboard-shell {
+      overflow-x: auto;
+      padding-bottom: 8px;
+    }
+    .mini-keyboard {
+      position: relative;
+      display: flex;
+      min-height: 160px;
+      user-select: none;
+      touch-action: manipulation;
+    }
+    .mini-key {
+      position: relative;
+      border: 1px solid #1f2937;
+      border-radius: 0 0 10px 10px;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 0.72rem;
+      transition: box-shadow 0.12s ease, transform 0.12s ease, background 0.12s ease;
+    }
+    .mini-key:hover {
+      transform: translateY(-1px);
+    }
+    .mini-key.white {
+      width: 36px;
+      height: 156px;
+      background: linear-gradient(180deg, #ffffff 0%, #dbeafe 100%);
+      color: #0f172a;
+      z-index: 1;
+      padding-bottom: 10px;
+    }
+    .mini-key.black {
+      position: absolute;
+      width: 22px;
+      height: 96px;
+      background: linear-gradient(180deg, #1e293b 0%, #020617 100%);
+      color: #f8fafc;
+      z-index: 2;
+      padding-bottom: 8px;
+      border-radius: 0 0 8px 8px;
+      font-size: 0.62rem;
+    }
+    .mini-key.active {
+      box-shadow: inset 0 0 0 2px #f59e0b, 0 0 14px rgba(245, 158, 11, 0.35);
+    }
+    .piano-roll-meta {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 0.9rem;
+      line-height: 1.6;
+    }
+
+    .channel-instrument-panel {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 12px;
+      margin-top: 12px;
+    }
+    .channel-card {
+      background: #020617;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 12px;
+    }
+    .channel-card h4 {
+      margin: 0 0 8px;
+      font-size: 0.98rem;
+    }
+    .channel-card .meta {
+      color: var(--muted);
+      font-size: 0.88rem;
+      line-height: 1.6;
+      margin-top: 6px;
+    }
+    .section-mini-title {
+      margin: 16px 0 8px;
+      font-size: 1.02rem;
+    }
+    .tiny-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .value-inline {
+      color: #bfdbfe;
+      margin-left: 8px;
+      font-size: 0.85rem;
+    }
+
+    .overview-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+    }
+    .overview-card {
+      background: #020617;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 12px 14px;
+    }
+    .overview-card h3 {
+      margin: 0 0 8px;
+      font-size: 1rem;
+    }
+    .overview-card p,
+    .overview-card li {
+      color: var(--muted);
+      line-height: 1.7;
+      margin: 0;
+    }
+    .overview-card ul {
+      margin-top: 8px;
+    }
+    .advanced-block {
+      margin-top: 14px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: rgba(2, 6, 23, 0.72);
+      overflow: hidden;
+    }
+    .advanced-block[open] {
+      background: rgba(2, 6, 23, 0.92);
+    }
+    .advanced-block > summary {
+      cursor: pointer;
+      list-style: none;
+      padding: 14px 16px;
+      font-weight: 700;
+      color: var(--text);
+      background: rgba(30, 41, 59, 0.82);
+      border-bottom: 1px solid transparent;
+    }
+    .advanced-block[open] > summary {
+      border-bottom-color: var(--line);
+    }
+    .advanced-block > summary::-webkit-details-marker {
+      display: none;
+    }
+    .advanced-block > summary::before {
+      content: '▶';
+      display: inline-block;
+      margin-right: 8px;
+      color: var(--accent2);
+      transform: translateY(-1px);
+    }
+    .advanced-block[open] > summary::before {
+      content: '▼';
+    }
+    .advanced-inner {
+      padding: 14px 16px 16px;
+    }
+    .advanced-note {
+      margin: 0 0 12px;
+      color: var(--muted);
+      line-height: 1.75;
+    }
+    .guide-list {
+      margin: 0;
+      padding-left: 1.2rem;
+    }
+    .guide-list li {
+      margin-bottom: 8px;
+      color: var(--muted);
+      line-height: 1.75;
+    }
+    .section-tag {
+      display: inline-block;
+      margin-left: 8px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      border: 1px solid #334155;
+      background: rgba(34, 197, 94, 0.10);
+      color: #bbf7d0;
+      font-size: 0.78rem;
+      vertical-align: middle;
+    }
+
+
+    .help-panel {
+      padding-top: 18px;
+    }
+    .optimized-help-grid {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr;
+      gap: 16px;
+      align-items: start;
+    }
+    .guide-card {
+      background: #020617;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 16px;
+    }
+    .guide-card h3 {
+      margin: 0 0 14px;
+      font-size: 1.1rem;
+    }
+    .guide-block + .guide-block {
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid rgba(148, 163, 184, 0.14);
+    }
+    .guide-block h4 {
+      margin: 0 0 8px;
+      font-size: 0.98rem;
+    }
+    .guide-block p,
+    .guide-block li {
+      color: var(--muted);
+      line-height: 1.8;
+    }
+    .ordered-guide {
+      margin: 0;
+      padding-left: 1.25rem;
+    }
+    .ordered-guide li + li {
+      margin-top: 10px;
+    }
+    .ordered-guide strong {
+      color: var(--text);
+    }
+    .info-stack {
+      display: grid;
+      gap: 14px;
+    }
+    .info-stack .advanced-block {
+      margin-top: 0;
+    }
+    .math-note {
+      margin: 0 0 10px;
+      color: var(--muted);
+      line-height: 1.75;
+    }
+    .math-pre {
+      min-height: 180px;
+      max-height: 720px;
+    }
+    @media (max-width: 980px) {
+      .two-col, .canvas-grid, .canvas-grid-3, .learn-grid, .optimized-help-grid { grid-template-columns: 1fr; }
+      .app { padding: 12px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header class="hero panel">
+      <h1>軽量MIDI学習シンセ v2 <span class="badge">先にレンダリング → あとで再生</span></h1>
+      <p>重いリアルタイム合成を避け、MIDIを先にPCMへレンダリングしてから再生します。再生中はリサジュー表示、ボード線図風の片対数FFT、短時間FFTを表示します。擬似リバーブ/ディレイによる空間系、Karplus-Strong による物理モデリングも加え、シンセサイザーとDTMの学習に使えるようにしています。</p>
+    </header>
+
+    <section class="panel">
+      <div class="overview-grid">
+        <div class="overview-card">
+          <h3>この版の考え方</h3>
+          <p>機能は削らずに残し、普段よく触る項目だけを前面に出しました。上級DSPや理論表示は折りたたみの中にまとめ、必要なときだけ開ける構成です。</p>
+        </div>
+        <div class="overview-card">
+          <h3>最初に触る場所</h3>
+          <ul class="guide-list">
+            <li>MIDIファイル、音色、サンプルレート、同時発音数</li>
+            <li>ADSR、cutoff、delay、feedback、density</li>
+            <li>レンダリング、再生、WAVダウンロード</li>
+          </ul>
+        </div>
+        <div class="overview-card">
+          <h3>折りたたんだ機能</h3>
+          <p>モジュレーション、FM、ウェーブテーブル、コンプレッサー、Parametric EQ、オーバーサンプリング、チャンネル別音色、$z$平面、Bode Plot、Convolution Reverb は残しています。</p>
+        </div>
+        <div class="overview-card">
+          <h3>学びやすい順番</h3>
+          <ul class="guide-list">
+            <li>1. 波形とADSRを見る</li>
+            <li>2. フィルタとFFTを見る</li>
+            <li>3. ドラムとマルチ音色を見る</li>
+            <li>4. 最後に上級DSPを見る</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+
+    <section class="panel">
+      <div class="grid">
+        <label>
+          <span>MIDIファイル</span>
+          <input id="midiFileInput" type="file" accept=".mid,.midi" />
+        </label>
+        <label>
+          <span>音色</span>
+          <select id="instrumentSelect">
+            <option value="famicom">Famicom Pulse</option>
+            <option value="square">Square</option>
+            <option value="saw">Saw</option>
+            <option value="triangle">Triangle</option>
+            <option value="supersaw">SuperSaw Lite</option>
+            <option value="piano">Piano Lite</option>
+            <option value="guitar">Guitar Lite</option>
+            <option value="fm">FM Bell / EP</option>
+            <option value="noise">Noise Synth</option>
+            <option value="wavetable">Wavetable</option>
+            <option value="karplus">Karplus-Strong String</option>
+            <option value="sine">Sine</option>
+          </select>
+        </label>
+        <label>
+          <span>サンプルレート</span>
+          <select id="sampleRateSelect">
+            <option value="22050" selected>22050 Hz 軽量</option>
+            <option value="32000">32000 Hz 標準</option>
+            <option value="44100">44100 Hz 高め</option>
+          </select>
+        </label>
+        <label>
+          <span>Famicom duty</span>
+          <select id="dutySelect">
+            <option value="0.125">12.5%</option>
+            <option value="0.25" selected>25%</option>
+            <option value="0.5">50%</option>
+          </select>
+        </label>
+        <label>
+          <span>最大同時発音数</span>
+          <select id="polyphonySelect">
+            <option value="4">4</option>
+            <option value="8" selected>8</option>
+            <option value="12">12</option>
+            <option value="16">16</option>
+          </select>
+        </label>
+        <label>
+          <span>音量</span>
+          <input id="volumeSlider" type="range" min="0.05" max="1.00" step="0.01" value="0.70" />
+        </label>
+      </div>
+
+      <div class="subgrid">
+        <label>
+          <span>Attack <span id="attackValue" class="control-value">1 ms</span></span>
+          <input id="attackSlider" type="range" min="0" max="500" step="1" value="1" />
+        </label>
+        <label>
+          <span>Decay <span id="decayValue" class="control-value">30 ms</span></span>
+          <input id="decaySlider" type="range" min="0" max="1500" step="1" value="30" />
+        </label>
+        <label>
+          <span>Sustain <span id="sustainValue" class="control-value">0.68</span></span>
+          <input id="sustainSlider" type="range" min="0.00" max="1.00" step="0.01" value="0.68" />
+        </label>
+        <label>
+          <span>Release <span id="releaseValue" class="control-value">50 ms</span></span>
+          <input id="releaseSlider" type="range" min="0" max="2000" step="1" value="50" />
+        </label>
+        <label>
+          <span>Low-pass cutoff <span id="cutoffValue" class="control-value">5200 Hz</span></span>
+          <input id="cutoffSlider" type="range" min="200" max="16000" step="10" value="5200" />
+        </label>
+        <label>
+          <span>Low-pass slope</span>
+          <select id="filterPassesSelect">
+            <option value="0">Off</option>
+            <option value="1" selected>12 dB/oct 相当</option>
+            <option value="2">24 dB/oct 相当</option>
+          </select>
+        </label>
+        <label>
+          <span>Space mix <span id="spaceMixValue" class="control-value">0.28</span></span>
+          <input id="spaceMixSlider" type="range" min="0.00" max="1.00" step="0.01" value="0.28" />
+        </label>
+        <label>
+          <span>Delay <span id="delayMsValue" class="control-value">180 ms</span></span>
+          <input id="delayMsSlider" type="range" min="40" max="600" step="1" value="180" />
+        </label>
+        <label>
+          <span>Feedback <span id="feedbackValue" class="control-value">0.36</span></span>
+          <input id="feedbackSlider" type="range" min="0.00" max="0.92" step="0.01" value="0.36" />
+        </label>
+        <label>
+          <span>Density <span id="densityValue" class="control-value">3 taps</span></span>
+          <input id="densitySlider" type="range" min="1" max="5" step="1" value="3" />
+        </label>
+        <label>
+          <span>Lissajous mode</span>
+          <select id="lissajousModeSelect">
+            <option value="drywet" selected>x = dry / y = wet</option>
+            <option value="lr">x = left / y = right</option>
+          </select>
+        </label>
+      </div>
+
+      <details class="advanced-block">
+        <summary>上級音作りとDSP設定を表示</summary>
+        <div class="advanced-inner">
+          <p class="advanced-note">ここには、LFO波形、Velocity to Filter、Drive、Chorus、FM、ノイズ、ウェーブテーブル、コンプレッサー、Parametric EQ、オーバーサンプリング、Convolution Reverb など、基本操作より一段上の項目をまとめています。初回は閉じたままでも再生できます。</p>
+          <div class="subgrid">
+        <label>
+          <span>Mod target</span>
+          <select id="modTargetSelect">
+            <option value="none" selected>Off</option>
+            <option value="pitch">Pitch vibrato</option>
+            <option value="amp">Amp tremolo</option>
+            <option value="filter">Filter wobble</option>
+          </select>
+        </label>
+        <label>
+          <span>Mod rate <span id="modRateValue" class="control-value">5.0 Hz</span></span>
+          <input id="modRateSlider" type="range" min="0.1" max="12.0" step="0.1" value="5.0" />
+        </label>
+        <label>
+          <span>Mod depth <span id="modDepthValue" class="control-value">0.00</span></span>
+          <input id="modDepthSlider" type="range" min="0.00" max="1.00" step="0.01" value="0.00" />
+        </label>
+        <label>
+          <span>Velocity → cutoff <span id="velToCutoffValue" class="control-value">0.00</span></span>
+          <input id="velToCutoffSlider" type="range" min="0.00" max="1.00" step="0.01" value="0.00" />
+        </label>
+        <label>
+          <span>Drive <span id="driveValue" class="control-value">0.00</span></span>
+          <input id="driveSlider" type="range" min="0.00" max="1.00" step="0.01" value="0.00" />
+        </label>
+        <label>
+          <span>Chorus mix <span id="chorusMixValue" class="control-value">0.00</span></span>
+          <input id="chorusMixSlider" type="range" min="0.00" max="1.00" step="0.01" value="0.00" />
+        </label>
+        <label>
+          <span>Chorus depth <span id="chorusDepthValue" class="control-value">8.0 ms</span></span>
+          <input id="chorusDepthSlider" type="range" min="0.0" max="20.0" step="0.1" value="8.0" />
+        </label>
+        <label>
+          <span>Chorus rate <span id="chorusRateValue" class="control-value">0.8 Hz</span></span>
+          <input id="chorusRateSlider" type="range" min="0.1" max="5.0" step="0.1" value="0.8" />
+        </label>
+        <label>
+          <span>Resonance Q <span id="resonanceValue" class="control-value">0.70</span></span>
+          <input id="resonanceSlider" type="range" min="0.10" max="12.00" step="0.05" value="0.70" />
+        </label>
+        <label>
+          <span>Filter env amount <span id="filterEnvAmountValue" class="control-value">0.00</span></span>
+          <input id="filterEnvAmountSlider" type="range" min="0.00" max="4.00" step="0.01" value="0.00" />
+        </label>
+        <label>
+          <span>Filter env decay <span id="filterEnvDecayValue" class="control-value">120 ms</span></span>
+          <input id="filterEnvDecaySlider" type="range" min="10" max="2000" step="1" value="120" />
+        </label>
+        <label>
+          <span>LFO waveform</span>
+          <select id="modWaveformSelect">
+            <option value="sine" selected>Sine</option>
+            <option value="triangle">Triangle</option>
+            <option value="square">Square</option>
+            <option value="sampleHold">Sample &amp; Hold</option>
+          </select>
+        </label>
+        <label>
+          <span>FM ratio <span id="fmRatioValue" class="control-value">2.00</span></span>
+          <input id="fmRatioSlider" type="range" min="0.25" max="12.00" step="0.05" value="2.00" />
+        </label>
+        <label>
+          <span>FM index <span id="fmIndexValue" class="control-value">0.00</span></span>
+          <input id="fmIndexSlider" type="range" min="0.00" max="12.00" step="0.05" value="0.00" />
+        </label>
+        <label>
+          <span>Wavetable shape</span>
+          <select id="wavetableSelect">
+            <option value="rich" selected>Rich harmonics</option>
+            <option value="vowel">Vowel-ish</option>
+            <option value="odd">Odd harmonics</option>
+          </select>
+        </label>
+        <label>
+          <span>Analysis window</span>
+          <select id="windowFunctionSelect">
+            <option value="hann" selected>Hann</option>
+            <option value="hamming">Hamming</option>
+            <option value="blackman">Blackman</option>
+            <option value="rect">Rectangular</option>
+          </select>
+        </label>
+        <label>
+          <span>Oversampling</span>
+          <select id="oversampleSelect">
+            <option value="1" selected>1x</option>
+            <option value="2">2x</option>
+          </select>
+        </label>
+        <label>
+          <span>Comp threshold <span id="compThresholdValue" class="control-value">-12.0 dB</span></span>
+          <input id="compThresholdSlider" type="range" min="-36" max="0" step="0.5" value="-12" />
+        </label>
+        <label>
+          <span>Comp ratio <span id="compRatioValue" class="control-value">2.0:1</span></span>
+          <input id="compRatioSlider" type="range" min="1.0" max="12.0" step="0.1" value="2.0" />
+        </label>
+        <label>
+          <span>Comp makeup <span id="compMakeupValue" class="control-value">0.0 dB</span></span>
+          <input id="compMakeupSlider" type="range" min="0.0" max="18.0" step="0.1" value="0.0" />
+        </label>
+        <label>
+          <span>Param EQ freq <span id="eqFreqValue" class="control-value">1800 Hz</span></span>
+          <input id="eqFreqSlider" type="range" min="80" max="12000" step="10" value="1800" />
+        </label>
+        <label>
+          <span>Param EQ gain <span id="eqGainValue" class="control-value">0.0 dB</span></span>
+          <input id="eqGainSlider" type="range" min="-18.0" max="18.0" step="0.1" value="0.0" />
+        </label>
+        <label>
+          <span>Param EQ Q <span id="eqQValue" class="control-value">0.90</span></span>
+          <input id="eqQSlider" type="range" min="0.20" max="10.00" step="0.05" value="0.90" />
+        </label>
+        <label>
+          <span>Phase mode</span>
+          <select id="phaseModeSelect">
+            <option value="lr" selected>L/R goniometer</option>
+            <option value="ms">Mid/Side</option>
+          </select>
+        </label>
+        <label>
+          <span>Drum mix <span id="drumMixValue" class="control-value">0.85</span></span>
+          <input id="drumMixSlider" type="range" min="0.00" max="1.00" step="0.01" value="0.85" />
+        </label>
+        <label>
+          <span>Conv reverb mix <span id="convMixValue" class="control-value">0.00</span></span>
+          <input id="convMixSlider" type="range" min="0.00" max="1.00" step="0.01" value="0.00" />
+        </label>
+        <label>
+          <span>IR length <span id="convLengthValue" class="control-value">420 ms</span></span>
+          <input id="convLengthSlider" type="range" min="80" max="1600" step="10" value="420" />
+        </label>
+        <label>
+          <span>IR pre-delay <span id="convPredelayValue" class="control-value">18 ms</span></span>
+          <input id="convPredelaySlider" type="range" min="0" max="180" step="1" value="18" />
+        </label>
+        <label>
+          <span>IR damping <span id="convDampingValue" class="control-value">0.58</span></span>
+          <input id="convDampingSlider" type="range" min="0.05" max="0.98" step="0.01" value="0.58" />
+        </label>
+      </div>
+          </div>
+        </div>
+      </details>
+
+      <p class="tiny-note">基本の学習では、まず ADSR・cutoff・delay 系だけで十分です。上級音作りを開くと、LFO、FM、ウェーブテーブル、コンプレッサー、EQ、Convolution Reverb まで同じレンダリング系の中で比較できます。Karplus-Strong String は短い雑音を遅延ループで循環させ、弦をはじく近似モデルとして学べます。</p>
+
+      <div class="actions">
+        <button id="renderBtn">1. MIDIを読み込んでレンダリング</button>
+        <button id="playBtn" disabled>2. 再生</button>
+        <button id="downloadWavBtn" disabled class="secondary">3. WAVダウンロード</button>
+        <button id="pauseBtn" disabled class="ghost">一時停止</button>
+        <button id="stopBtn" disabled class="ghost">停止</button>
+        <button id="testToneBtn" class="secondary">試しにA4を鳴らす</button>
+      </div>
+
+      <label class="seek-wrap">
+        <span>再生位置</span>
+        <input id="seekSlider" type="range" min="0" max="1000" value="0" disabled />
+      </label>
+
+      <div class="status-grid">
+        <div><strong>状態</strong><span id="statusText">MIDIを選んでください</span></div>
+        <div><strong>ファイル</strong><span id="fileName">-</span></div>
+        <div><strong>ノート数</strong><span id="noteCount">-</span></div>
+        <div><strong>長さ</strong><span id="durationText">-</span></div>
+        <div><strong>テンポ</strong><span id="tempoText">-</span></div>
+        <div><strong>レンダ進捗</strong><span id="progressText">0%</span></div>
+        <div><strong>再生時刻</strong><span id="playTimeText">0:00.0 / 0:00.0</span></div>
+        <div><strong>主ピーク周波数</strong><span id="peakFreqText">-</span></div>
+      </div>
+      <p class="hint">軽く動かすなら <span class="mono">22050 Hz</span>、<span class="mono">polyphony 4〜8</span>、<span class="mono">Famicom Pulse</span> が安全です。最大長は10分までに制限しています。</p>
+      <details class="advanced-block">
+        <summary>チャンネル別音色を表示 <span class="section-tag">上級</span></summary>
+        <div class="advanced-inner">
+          <p class="advanced-note">1つのMIDIにメロディ、伴奏、ベース、ドラムが混ざっているときに、チャンネルごとに音色を分けて再現度を上げるための設定です。単一音色で構造を見たいときは閉じたままで構いません。</p>
+          <div id="channelInstrumentPanel" class="channel-instrument-panel"></div>
+          <p class="tiny-note">MIDI読込後に各チャンネルの音色を切り替えられます。標準MIDIの Program Change を簡易対応し、Auto を選ぶと GM 的な近似音色へ割り当てます。ドラムチャンネルは簡易ドラム合成を使います。</p>
+        </div>
+      </details>
+    </section>
+
+    <section class="panel">
+      <div class="canvas-grid-3">
+        <div class="canvas-card">
+          <h3>全体波形プレビュー</h3>
+          <canvas id="overviewWaveCanvas" width="900" height="220"></canvas>
+        </div>
+        <div class="canvas-card">
+          <h3>再生位置周辺の波形</h3>
+          <canvas id="liveWaveCanvas" width="900" height="220"></canvas>
+        </div>
+        <div class="canvas-card">
+          <h3>リサジュー表示</h3>
+          <canvas id="lissajousCanvas" width="900" height="220"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="canvas-grid-3">
+        <div class="canvas-card">
+          <h3>再生中のFFT / 線形周波数軸</h3>
+          <canvas id="linearFftCanvas" width="900" height="260"></canvas>
+        </div>
+        <div class="canvas-card">
+          <h3>再生中のFFT / ボード線図風 片対数表示</h3>
+          <canvas id="fftCanvas" width="900" height="260"></canvas>
+        </div>
+        <div class="canvas-card">
+          <h3>短時間FFT / スペクトログラム</h3>
+          <canvas id="spectrogramCanvas" width="900" height="260"></canvas>
+        </div>
+      </div>
+    </section>
+
+
+    <section class="panel">
+      <div class="canvas-grid">
+        <div class="canvas-card">
+          <h3>MIDIピアノロール</h3>
+          <canvas id="pianoRollCanvas" width="900" height="320"></canvas>
+          <p class="piano-roll-meta">MIDI読込後にノート配置を表示します。クリックするとその位置へ移動します。</p>
+        </div>
+        <div class="canvas-card">
+          <h3>ピアノ鍵盤</h3>
+          <p class="tiny-note keyboard-panel-note">鍵盤を押すと現在の音色で短い試聴を行います。再生中は対応するキーを強調表示します。</p>
+          <div class="mini-keyboard-shell">
+            <div id="miniKeyboard" class="mini-keyboard"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="canvas-grid-3">
+        <div class="canvas-card">
+          <h3>ADSR グラフ <span class="section-tag">基礎</span></h3>
+          <canvas id="adsrCanvas" width="900" height="220"></canvas>
+        </div>
+        <div class="canvas-card">
+          <h3>フィルタ包絡 / 共振 <span class="section-tag">基礎</span></h3>
+          <canvas id="filterEnvCanvas" width="900" height="220"></canvas>
+        </div>
+        <div class="canvas-card">
+          <h3>ステレオ位相解析 <span class="section-tag">中級</span></h3>
+          <canvas id="phaseScopeCanvas" width="900" height="220"></canvas>
+        </div>
+      </div>
+      <div class="canvas-grid" style="margin-top:16px;">
+        <div class="canvas-card">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px;">
+            <h3 style="margin:0;">窓関数プレビュー</h3>
+            <label style="display:flex;align-items:center;gap:8px;min-width:220px;">
+              <span style="white-space:nowrap;color:var(--muted);font-size:0.92rem;">プレビュー切替</span>
+              <select id="windowPreviewSelect">
+                <option value="hann" selected>Hann</option>
+                <option value="hamming">Hamming</option>
+                <option value="blackman">Blackman</option>
+                <option value="rect">Rectangular</option>
+              </select>
+            </label>
+          </div>
+          <canvas id="windowCanvas" width="900" height="220"></canvas>
+          <p class="tiny-note">この切替は窓関数プレビューと解析用の窓関数設定を連動させます。Hann は標準的、Hamming は端が少し高く、Blackman は漏れを抑えやすく、Rectangular は切り出しそのままです。</p>
+        </div>
+        <div class="canvas-card">
+          <h3>ドラム学習メモ</h3>
+          <pre id="drumFormulaBox">ドラムをレンダリングすると、ここにキック / スネア / ハイハット / タム / クラップ / シンバル / リム / ライドの簡易モデル式と、減衰・ノイズ比率・共振周波数の見方を表示します。</pre>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <details class="advanced-block">
+        <summary>上級DSP表示を開く <span class="section-tag">$z$平面 / Bode / Convolution Reverb</span></summary>
+        <div class="advanced-inner">
+          <p class="advanced-note">この領域は、音を鳴らすための必須UIではなく、フィルタ理論と空間処理を数式で追うための表示です。レゾナンスと極の位置、|H(e^{jω})| の意味、畳み込みリバーブのインパルス応答を対応づけて学べます。</p>
+          <div class="canvas-grid-3">
+            <div class="canvas-card">
+              <h3>$z$平面 / Poles and Zeros</h3>
+              <canvas id="zPlaneCanvas" width="900" height="260"></canvas>
+            </div>
+            <div class="canvas-card">
+              <h3>理論的周波数応答 / Bode Plot</h3>
+              <canvas id="bodeCanvas" width="900" height="260"></canvas>
+            </div>
+            <div class="canvas-card">
+              <h3>Convolution Reverb の IR</h3>
+              <canvas id="irCanvas" width="900" height="260"></canvas>
+            </div>
+          </div>
+          <p class="tiny-note">$z$平面では単位円と極・零点を表示します。Bode Plot は low-pass と parametric EQ の理論応答、および両者の合成応答を示します。Convolution Reverb は学習用に生成したインパルス応答 h[n] を表示します。</p>
+        </div>
+      </details>
+    </section>
+
+    <section class="panel help-panel">
+      <div class="optimized-help-grid">
+        <div class="guide-card">
+          <h3>使い方と表示の読み方</h3>
+          <div class="guide-block">
+            <h4>基本の流れ</h4>
+            <ol class="ordered-guide">
+              <li><strong>MIDIを選ぶ</strong><br>.mid / .midi を読み込みます。読込後はノート列がピアノロールに展開され、必要ならチャンネル別音色も確認できます。</li>
+              <li><strong>音色・サンプルレート・polyphony を決める</strong><br>まずは軽い設定で音の全体像をつかみ、必要なら後から高品位側へ上げるのが扱いやすいです。</li>
+              <li><strong>ADSR と filter を軽く調整する</strong><br>Attack / Decay / Sustain / Release と cutoff / Q を触ると、立ち上がり・余韻・明るさがすぐ変わります。</li>
+              <li><strong>レンダリングして再生する</strong><br>このページは先にPCMを計算してから再生するので、再生中は比較的軽く、耳と表示を対応づけやすい構成です。</li>
+              <li><strong>表示を順番に読む</strong><br>全体波形 → 再生位置周辺の波形 → FFT / STFT → ピアノロール → ADSR / フィルタ包絡の順で見ると理解しやすいです。</li>
+              <li><strong>必要なら WAV 保存や上級DSPを見る</strong><br>WAV 保存はレンダ済みPCMをそのまま保存します。上級DSPは普段は閉じたままで問題ありません。</li>
+            </ol>
+          </div>
+          <div class="guide-block">
+            <h4>各表示の意味</h4>
+            <ul class="guide-list">
+              <li><strong>全体波形</strong> : 曲全体のエネルギーの流れ。サビや余韻の密度が分かります。</li>
+              <li><strong>再生位置周辺の波形</strong> : いま鳴っている局所波形。drive や倍音の増え方を見やすい表示です。</li>
+              <li><strong>リサジュー表示</strong> : 左右チャンネルまたは dry / wet の関係。位相差やステレオの広がりを読みます。</li>
+              <li><strong>線形FFT</strong> : 基音と倍音の位置関係をそのまま読む表示です。</li>
+              <li><strong>Bode風FFT</strong> : 低域から高域までの帯域バランスを見やすくした表示です。</li>
+              <li><strong>短時間FFT</strong> : 時間変化を追う表示。アタックの鋭さやドラムの瞬間成分が分かります。</li>
+              <li><strong>ピアノロール</strong> : 横が時間、縦が音高。メロディ、伴奏、ベースの役割分担を確認できます。</li>
+              <li><strong>鍵盤</strong> : 単音試聴。FFT と合わせると、1音ごとの倍音構造を確かめやすいです。</li>
+              <li><strong>ADSR / フィルタ包絡</strong> : 音量と cutoff が時間でどう変わるかを読みます。</li>
+            </ul>
+          </div>
+          <div class="guide-block">
+            <h4>最初に触ると効果が分かりやすい項目</h4>
+            <ul class="guide-list">
+              <li>音色を切り替える</li>
+              <li>Attack と Release を変える</li>
+              <li>cutoff と Q を変える</li>
+              <li>LFO と Velocity to Filter を少しだけ上げる</li>
+              <li>最後に Chorus / EQ / Compressor などを足す</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="info-stack">
+          <details class="advanced-block" open>
+            <summary>学習メモ / 基本から上級へ</summary>
+            <div class="advanced-inner">
+              <ul>
+                <li>周波数 <span class="mono">f = 440 × 2^((n-69)/12)</span> でMIDI番号と音高がつながります。</li>
+                <li>矩形波やパルス波は倍音が多く、ファミコン風の輪郭を作りやすいです。</li>
+                <li>FFT は周波数成分、STFT はその時間変化を見るための道具です。</li>
+                <li>ADSR は音量の時間変化、フィルタ包絡は音色の時間変化です。</li>
+                <li>Velocity to Filter を上げると、強打時に高域が増えて音が明るくなります。</li>
+                <li>PolyBLEP は square / pulse の不連続点をなめらかにし、折り返し雑音を抑えます。</li>
+                <li>チャンネル別音色を使うと、メロディ・伴奏・ベースを別の役割で聴き分けやすくなります。</li>
+              </ul>
+            </div>
+          </details>
+
+          <details class="advanced-block">
+            <summary>実装メモ / なぜこの構成か</summary>
+            <div class="advanced-inner">
+              <ul>
+                <li>外部ライブラリなしで、GitHub Pages 上でも動かしやすい構成です。</li>
+                <li>レンダリング後に再生するため、再生中の負荷を低減できます。</li>
+                <li>再生はステレオ化し、空間系とリサジュー表示に利用しています。</li>
+                <li>最大同時発音数で負荷を抑え、重いMIDIでも扱いやすくしています。</li>
+                <li>ローパスや一部のエフェクトはレンダ後適用を使い、動作の安定を優先しています。</li>
+                <li>WAV 保存は既に計算した PCM を Blob 化して保存するため、自然な拡張です。</li>
+              </ul>
+            </div>
+          </details>
+
+          <details class="advanced-block">
+            <summary>数式と理論解説を開く</summary>
+            <div class="advanced-inner">
+              <p class="math-note">この欄はレンダリング後に、現在の音色・フィルタ・解析設定に合わせて更新されます。普段は閉じたままでよく、式を追いたいときだけ開けば十分です。</p>
+              <pre id="formulaBox" class="math-pre">MIDIを読み込んでレンダリングすると、ここに現在の設定に対応した数式解説が表示されます。発振器、ADSR、フィルタ、LFO、FM、EQ、Compressor、FFT / STFT、z平面、Bode Plot などをまとめて確認できます。</pre>
+            </div>
+          </details>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+  const ui = {
+    midiFileInput: document.getElementById('midiFileInput'),
+    instrumentSelect: document.getElementById('instrumentSelect'),
+    sampleRateSelect: document.getElementById('sampleRateSelect'),
+    dutySelect: document.getElementById('dutySelect'),
+    polyphonySelect: document.getElementById('polyphonySelect'),
+    volumeSlider: document.getElementById('volumeSlider'),
+    attackSlider: document.getElementById('attackSlider'),
+    decaySlider: document.getElementById('decaySlider'),
+    sustainSlider: document.getElementById('sustainSlider'),
+    releaseSlider: document.getElementById('releaseSlider'),
+    cutoffSlider: document.getElementById('cutoffSlider'),
+    filterPassesSelect: document.getElementById('filterPassesSelect'),
+    renderBtn: document.getElementById('renderBtn'),
+    playBtn: document.getElementById('playBtn'),
+    downloadWavBtn: document.getElementById('downloadWavBtn'),
+    pauseBtn: document.getElementById('pauseBtn'),
+    stopBtn: document.getElementById('stopBtn'),
+    testToneBtn: document.getElementById('testToneBtn'),
+    seekSlider: document.getElementById('seekSlider'),
+    statusText: document.getElementById('statusText'),
+    fileName: document.getElementById('fileName'),
+    noteCount: document.getElementById('noteCount'),
+    durationText: document.getElementById('durationText'),
+    tempoText: document.getElementById('tempoText'),
+    progressText: document.getElementById('progressText'),
+    playTimeText: document.getElementById('playTimeText'),
+    peakFreqText: document.getElementById('peakFreqText'),
+    overviewWaveCanvas: document.getElementById('overviewWaveCanvas'),
+    liveWaveCanvas: document.getElementById('liveWaveCanvas'),
+    lissajousCanvas: document.getElementById('lissajousCanvas'),
+    linearFftCanvas: document.getElementById('linearFftCanvas'),
+    fftCanvas: document.getElementById('fftCanvas'),
+    spectrogramCanvas: document.getElementById('spectrogramCanvas'),
+    pianoRollCanvas: document.getElementById('pianoRollCanvas'),
+    miniKeyboard: document.getElementById('miniKeyboard'),
+    formulaBox: document.getElementById('formulaBox'),
+    attackValue: document.getElementById('attackValue'),
+    decayValue: document.getElementById('decayValue'),
+    sustainValue: document.getElementById('sustainValue'),
+    releaseValue: document.getElementById('releaseValue'),
+    cutoffValue: document.getElementById('cutoffValue'),
+    spaceMixSlider: document.getElementById('spaceMixSlider'),
+    delayMsSlider: document.getElementById('delayMsSlider'),
+    feedbackSlider: document.getElementById('feedbackSlider'),
+    densitySlider: document.getElementById('densitySlider'),
+    lissajousModeSelect: document.getElementById('lissajousModeSelect'),
+    modTargetSelect: document.getElementById('modTargetSelect'),
+    modRateSlider: document.getElementById('modRateSlider'),
+    modDepthSlider: document.getElementById('modDepthSlider'),
+    velToCutoffSlider: document.getElementById('velToCutoffSlider'),
+    driveSlider: document.getElementById('driveSlider'),
+    chorusMixSlider: document.getElementById('chorusMixSlider'),
+    chorusDepthSlider: document.getElementById('chorusDepthSlider'),
+    chorusRateSlider: document.getElementById('chorusRateSlider'),
+    drumMixSlider: document.getElementById('drumMixSlider'),
+    convMixSlider: document.getElementById('convMixSlider'),
+    convLengthSlider: document.getElementById('convLengthSlider'),
+    convPredelaySlider: document.getElementById('convPredelaySlider'),
+    convDampingSlider: document.getElementById('convDampingSlider'),
+    channelInstrumentPanel: document.getElementById('channelInstrumentPanel'),
+    spaceMixValue: document.getElementById('spaceMixValue'),
+    delayMsValue: document.getElementById('delayMsValue'),
+    feedbackValue: document.getElementById('feedbackValue'),
+    densityValue: document.getElementById('densityValue'),
+    modRateValue: document.getElementById('modRateValue'),
+    modDepthValue: document.getElementById('modDepthValue'),
+    velToCutoffValue: document.getElementById('velToCutoffValue'),
+    driveValue: document.getElementById('driveValue'),
+    chorusMixValue: document.getElementById('chorusMixValue'),
+    chorusDepthValue: document.getElementById('chorusDepthValue'),
+    chorusRateValue: document.getElementById('chorusRateValue'),
+    drumMixValue: document.getElementById('drumMixValue'),
+    resonanceSlider: document.getElementById('resonanceSlider'),
+    filterEnvAmountSlider: document.getElementById('filterEnvAmountSlider'),
+    filterEnvDecaySlider: document.getElementById('filterEnvDecaySlider'),
+    modWaveformSelect: document.getElementById('modWaveformSelect'),
+    fmRatioSlider: document.getElementById('fmRatioSlider'),
+    fmIndexSlider: document.getElementById('fmIndexSlider'),
+    wavetableSelect: document.getElementById('wavetableSelect'),
+    windowFunctionSelect: document.getElementById('windowFunctionSelect'),
+    windowPreviewSelect: document.getElementById('windowPreviewSelect'),
+    oversampleSelect: document.getElementById('oversampleSelect'),
+    compThresholdSlider: document.getElementById('compThresholdSlider'),
+    compRatioSlider: document.getElementById('compRatioSlider'),
+    compMakeupSlider: document.getElementById('compMakeupSlider'),
+    eqFreqSlider: document.getElementById('eqFreqSlider'),
+    eqGainSlider: document.getElementById('eqGainSlider'),
+    eqQSlider: document.getElementById('eqQSlider'),
+    phaseModeSelect: document.getElementById('phaseModeSelect'),
+    adsrCanvas: document.getElementById('adsrCanvas'),
+    filterEnvCanvas: document.getElementById('filterEnvCanvas'),
+    phaseScopeCanvas: document.getElementById('phaseScopeCanvas'),
+    windowCanvas: document.getElementById('windowCanvas'),
+    zPlaneCanvas: document.getElementById('zPlaneCanvas'),
+    bodeCanvas: document.getElementById('bodeCanvas'),
+    irCanvas: document.getElementById('irCanvas'),
+    drumFormulaBox: document.getElementById('drumFormulaBox'),
+    resonanceValue: document.getElementById('resonanceValue'),
+    filterEnvAmountValue: document.getElementById('filterEnvAmountValue'),
+    filterEnvDecayValue: document.getElementById('filterEnvDecayValue'),
+    fmRatioValue: document.getElementById('fmRatioValue'),
+    fmIndexValue: document.getElementById('fmIndexValue'),
+    compThresholdValue: document.getElementById('compThresholdValue'),
+    compRatioValue: document.getElementById('compRatioValue'),
+    compMakeupValue: document.getElementById('compMakeupValue'),
+    eqFreqValue: document.getElementById('eqFreqValue'),
+    eqGainValue: document.getElementById('eqGainValue'),
+    eqQValue: document.getElementById('eqQValue')
+  };
+
+  const state = {
+    midiArrayBuffer: null,
+    midiData: null,
+    renderedPCM: null,
+    renderedAudioBuffer: null,
+    audioCtx: null,
+    analyser: null,
+    gainNode: null,
+    source: null,
+    playStartedAt: 0,
+    pauseOffset: 0,
+    isPlaying: false,
+    rendering: false,
+    rafId: 0,
+    timeData: null,
+    freqData: null,
+    specCtx: null,
+    specImageData: null,
+    dryPCM: null,
+    processedLeft: null,
+    processedRight: null,
+    visualNotes: [],
+    pianoRollMeta: null,
+    pianoRollBaseCanvas: null,
+    keyboardKeys: new Map(),
+    manualKeyTimers: new Map(),
+    previewSource: null,
+    channelInstrumentDefaults: new Map(),
+    phaseCorrelation: 0,
+    currentIrPreview: null
+  };
+
+  function setStatus(text) {
+    ui.statusText.textContent = text;
+  }
+
+  function clamp(v, lo, hi) {
+    return Math.min(hi, Math.max(lo, v));
+  }
+
+  function secText(sec) {
+    if (!Number.isFinite(sec)) return '-';
+    const m = Math.floor(sec / 60);
+    const s = sec - m * 60;
+    return `${m}:${s.toFixed(1).padStart(4, '0')}`;
+  }
+
+  function midiToFrequency(note) {
+    return 440 * Math.pow(2, (note - 69) / 12);
+  }
+
+  const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+  const KEYBOARD_START_NOTE = 48;
+  const KEYBOARD_END_NOTE = 84;
+
+  function noteName(note) {
+    const octave = Math.floor(note / 12) - 1;
+    return `${NOTE_NAMES[note % 12]}${octave}`;
+  }
+
+  function isBlackKey(note) {
+    const pc = note % 12;
+    return pc === 1 || pc === 3 || pc === 6 || pc === 8 || pc === 10;
+  }
+
+  const INSTRUMENT_OPTIONS = [
+    { value: 'auto', label: 'Auto (GM近似)' },
+    { value: 'sine', label: 'Sine' },
+    { value: 'square', label: 'Square' },
+    { value: 'saw', label: 'Saw' },
+    { value: 'triangle', label: 'Triangle' },
+    { value: 'supersaw', label: 'SuperSaw Lite' },
+    { value: 'famicom', label: 'Famicom Pulse' },
+    { value: 'piano', label: 'Piano Lite' },
+    { value: 'guitar', label: 'Guitar Lite' },
+    { value: 'fm', label: 'FM Bell / EP' },
+    { value: 'noise', label: 'Noise Synth' },
+    { value: 'wavetable', label: 'Wavetable' },
+    { value: 'karplus', label: 'Karplus String' },
+    { value: 'drumkit', label: 'Drum Kit' }
+  ];
+
+  function gmProgramToInstrument(program, isDrum = false) {
+    if (isDrum) return 'drumkit';
+    const p = Number.isFinite(program) ? program : 0;
+    if (p >= 0 && p <= 7) return 'piano';
+    if (p >= 24 && p <= 31) return 'guitar';
+    if (p >= 32 && p <= 39) return 'square';
+    if (p >= 48 && p <= 55) return 'sine';
+    if (p >= 80 && p <= 87) return 'square';
+    if (p >= 88 && p <= 95) return 'famicom';
+    return 'sine';
+  }
+
+  function rebuildChannelInstrumentPanel(midiData) {
+    const panel = ui.channelInstrumentPanel;
+    if (!panel) return;
+    panel.innerHTML = '';
+    state.channelInstrumentDefaults = new Map();
+    if (!midiData || !Array.isArray(midiData.channels) || !midiData.channels.length) {
+      panel.innerHTML = '<div class="channel-card"><div class="meta">MIDIを読むとチャンネル別設定を表示します。</div></div>';
+      return;
+    }
+    midiData.channels.forEach((info) => {
+      const defaultInst = gmProgramToInstrument(info.program, info.isDrum);
+      state.channelInstrumentDefaults.set(info.channel, defaultInst);
+      const card = document.createElement('div');
+      card.className = 'channel-card';
+      const select = document.createElement('select');
+      select.dataset.channel = String(info.channel);
+      INSTRUMENT_OPTIONS.forEach((opt) => {
+        if (info.isDrum && !['auto', 'drumkit'].includes(opt.value)) return;
+        const option = document.createElement('option');
+        option.value = opt.value;
+        option.textContent = opt.label;
+        select.appendChild(option);
+      });
+      select.value = info.isDrum ? 'drumkit' : 'auto';
+      card.innerHTML = `<h4>Channel ${info.channel + 1}${info.isDrum ? ' / Drum' : ''}</h4>`;
+      card.appendChild(select);
+      const meta = document.createElement('div');
+      meta.className = 'meta';
+      meta.textContent = `notes ${info.noteCount} / track ${info.trackIndices.join(', ')} / program ${info.program}`;
+      card.appendChild(meta);
+      panel.appendChild(card);
+    });
+  }
+
+  function getChannelInstrumentAssignments() {
+    const map = {};
+    if (!ui.channelInstrumentPanel) return map;
+    ui.channelInstrumentPanel.querySelectorAll('select[data-channel]').forEach((sel) => {
+      map[Number(sel.dataset.channel)] = sel.value;
+    });
+    return map;
+  }
+
+  function stopPreviewNote() {
+    if (!state.previewSource) return;
+    try { state.previewSource.stop(); } catch (_) {}
+    try { state.previewSource.disconnect(); } catch (_) {}
+    state.previewSource = null;
+  }
+
+  function flashKeyboardNote(note, durationMs = 220) {
+    const element = state.keyboardKeys.get(note);
+    if (!element) return;
+    if (state.manualKeyTimers.has(note)) {
+      clearTimeout(state.manualKeyTimers.get(note));
+    }
+    element.classList.add('active');
+    const timer = setTimeout(() => {
+      state.manualKeyTimers.delete(note);
+      syncKeyboardHighlights();
+    }, durationMs);
+    state.manualKeyTimers.set(note, timer);
+  }
+
+  function syncKeyboardHighlights(currentSec = currentPlaybackTime()) {
+    const active = new Set(state.manualKeyTimers.keys());
+    if (state.isPlaying && Array.isArray(state.visualNotes) && state.visualNotes.length) {
+      for (const note of state.visualNotes) {
+        if (note.startSec <= currentSec && currentSec < note.endSec) {
+          active.add(note.midi);
+        }
+      }
+    }
+    for (const [note, element] of state.keyboardKeys.entries()) {
+      element.classList.toggle('active', active.has(note));
+    }
+  }
+
+  function buildMiniKeyboard() {
+    const container = ui.miniKeyboard;
+    if (!container) return;
+    container.innerHTML = '';
+    state.keyboardKeys.clear();
+
+    const whiteNotes = [];
+    for (let note = KEYBOARD_START_NOTE; note <= KEYBOARD_END_NOTE; note++) {
+      if (!isBlackKey(note)) whiteNotes.push(note);
+    }
+
+    const whiteWidth = 36;
+    container.style.width = `${whiteNotes.length * whiteWidth}px`;
+
+    const whitePositions = new Map();
+    whiteNotes.forEach((note, index) => {
+      const key = document.createElement('button');
+      key.type = 'button';
+      key.className = 'mini-key white';
+      key.dataset.note = String(note);
+      key.title = noteName(note);
+      key.textContent = noteName(note);
+      whitePositions.set(note, index * whiteWidth);
+      key.addEventListener('click', () => triggerKeyboardPreview(note));
+      container.appendChild(key);
+      state.keyboardKeys.set(note, key);
+    });
+
+    for (let note = KEYBOARD_START_NOTE; note <= KEYBOARD_END_NOTE; note++) {
+      if (!isBlackKey(note)) continue;
+      const prevWhite = note - 1;
+      const key = document.createElement('button');
+      key.type = 'button';
+      key.className = 'mini-key black';
+      key.dataset.note = String(note);
+      key.title = noteName(note);
+      key.textContent = noteName(note);
+      key.style.left = `${(whitePositions.get(prevWhite) || 0) + 25}px`;
+      key.addEventListener('click', () => triggerKeyboardPreview(note));
+      container.appendChild(key);
+      state.keyboardKeys.set(note, key);
+    }
+  }
+
+  async function triggerKeyboardPreview(note) {
+    try {
+      ensureAudio();
+      await state.audioCtx.resume();
+      stopPreviewNote();
+      flashKeyboardNote(note, 420);
+      const rendered = await renderNotesToPCM(
+        [{ midi: note, startSec: 0, endSec: 0.42, velocity: 112 }],
+        { ...getCurrentRenderOptions(), polyphony: 1, sampleRate: Math.min(32000, parseInt(ui.sampleRateSelect.value, 10)) }
+      );
+      const buffer = state.audioCtx.createBuffer(2, rendered.leftPCM.length, rendered.sampleRate);
+      buffer.copyToChannel(rendered.leftPCM, 0);
+      buffer.copyToChannel(rendered.rightPCM, 1);
+      const source = state.audioCtx.createBufferSource();
+      source.buffer = buffer;
+      source.connect(state.analyser);
+      source.start();
+      state.previewSource = source;
+      source.onended = () => {
+        if (state.previewSource === source) state.previewSource = null;
+      };
+      setStatus(`${noteName(note)} を試聴`);
+    } catch (err) {
+      console.error(err);
+      setStatus(`鍵盤試聴エラー: ${err.message}`);
+    }
+  }
+
+  function setVisualNotes(notes) {
+    state.visualNotes = Array.isArray(notes) ? notes.slice() : [];
+    rebuildPianoRollBase();
+    drawPianoRoll();
+    syncKeyboardHighlights();
+  }
+
+  function rebuildPianoRollBase() {
+    const canvas = ui.pianoRollCanvas;
+    if (!canvas) return;
+    const base = document.createElement('canvas');
+    base.width = canvas.width;
+    base.height = canvas.height;
+    const ctx = base.getContext('2d');
+    const { width, height } = base;
+
+    ctx.clearRect(0, 0, width, height);
+    ctx.fillStyle = '#020617';
+    ctx.fillRect(0, 0, width, height);
+
+    const notes = state.visualNotes || [];
+    if (!notes.length) {
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '16px sans-serif';
+      ctx.fillText('MIDIを選ぶとここにピアノロールを表示します。', 24, 36);
+      state.pianoRollMeta = null;
+      state.pianoRollBaseCanvas = base;
+      return;
+    }
+
+    const minMidi = Math.max(KEYBOARD_START_NOTE, Math.min(...notes.map((n) => n.midi), KEYBOARD_START_NOTE));
+    const maxMidi = Math.min(KEYBOARD_END_NOTE, Math.max(...notes.map((n) => n.midi), KEYBOARD_END_NOTE));
+    const pitchMin = Math.min(minMidi, KEYBOARD_START_NOTE);
+    const pitchMax = Math.max(maxMidi, KEYBOARD_END_NOTE);
+    const pitchRange = pitchMax - pitchMin + 1;
+    const duration = Math.max(0.001, ...notes.map((n) => n.endSec));
+    const noteHeight = height / pitchRange;
+
+    for (let midi = pitchMin; midi <= pitchMax; midi++) {
+      const y = height - (midi - pitchMin + 1) * noteHeight;
+      ctx.fillStyle = isBlackKey(midi) ? 'rgba(30, 41, 59, 0.38)' : 'rgba(15, 23, 42, 0.16)';
+      ctx.fillRect(0, y, width, noteHeight);
+      ctx.strokeStyle = midi % 12 === 0 ? 'rgba(148, 163, 184, 0.28)' : 'rgba(148, 163, 184, 0.10)';
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(width, y);
+      ctx.stroke();
+    }
+
+    const bpm = state.midiData?.bpm || 120;
+    const beatSec = 60 / Math.max(1, bpm);
+    for (let t = 0; t <= duration + 0.0001; t += beatSec) {
+      const x = (t / duration) * width;
+      const isBar = Math.round(t / beatSec) % 4 === 0;
+      ctx.strokeStyle = isBar ? 'rgba(56, 189, 248, 0.24)' : 'rgba(56, 189, 248, 0.10)';
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, height);
+      ctx.stroke();
+    }
+
+    for (const note of notes) {
+      const x = (note.startSec / duration) * width;
+      const wRect = Math.max(2, ((note.endSec - note.startSec) / duration) * width);
+      const y = height - (note.midi - pitchMin + 1) * noteHeight + 1;
+      const rectH = Math.max(3, noteHeight - 2);
+      const velocity = Math.max(0.2, (note.velocity || 96) / 127);
+      ctx.fillStyle = `rgba(34, 197, 94, ${0.35 + velocity * 0.55})`;
+      ctx.fillRect(x, y, wRect, rectH);
+      ctx.strokeStyle = 'rgba(187, 247, 208, 0.38)';
+      ctx.strokeRect(x + 0.5, y + 0.5, Math.max(1, wRect - 1), Math.max(1, rectH - 1));
+    }
+
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '12px sans-serif';
+    for (let midi = pitchMin; midi <= pitchMax; midi++) {
+      if (midi % 12 !== 0) continue;
+      const y = height - (midi - pitchMin + 0.35) * noteHeight;
+      ctx.fillText(noteName(midi), 8, Math.max(12, y));
+    }
+
+    state.pianoRollMeta = { pitchMin, pitchMax, duration };
+    state.pianoRollBaseCanvas = base;
+  }
+
+  function drawPianoRoll(currentSec = currentPlaybackTime()) {
+    const canvas = ui.pianoRollCanvas;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!state.pianoRollBaseCanvas) rebuildPianoRollBase();
+    if (!state.pianoRollBaseCanvas) return;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(state.pianoRollBaseCanvas, 0, 0);
+
+    if (!state.pianoRollMeta) return;
+    const { duration } = state.pianoRollMeta;
+    const x = (clamp(currentSec, 0, duration) / duration) * canvas.width;
+    ctx.strokeStyle = '#f59e0b';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, canvas.height);
+    ctx.stroke();
+
+    ctx.fillStyle = '#fbbf24';
+    ctx.font = '12px sans-serif';
+    ctx.fillText(`${secText(clamp(currentSec, 0, duration))}`, Math.min(canvas.width - 64, x + 6), 18);
+  }
+
+  function seekFromPianoRoll(event) {
+    if (!state.pianoRollMeta || !state.renderedAudioBuffer) return;
+    const rect = ui.pianoRollCanvas.getBoundingClientRect();
+    const ratio = clamp((event.clientX - rect.left) / Math.max(1, rect.width), 0, 1);
+    state.pauseOffset = ratio * state.renderedAudioBuffer.duration;
+    ui.seekSlider.value = String(Math.floor(ratio * 1000));
+    drawCurrentWaveform();
+    drawLissajous();
+    drawPianoRoll(state.pauseOffset);
+    syncKeyboardHighlights(state.pauseOffset);
+    ui.playTimeText.textContent = `${secText(state.pauseOffset)} / ${secText(state.renderedAudioBuffer.duration)}`;
+    if (state.isPlaying) playRendered();
+  }
+
+
+  function ensureAudio() {
+    if (!state.audioCtx) {
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      state.audioCtx = new AudioContextClass();
+      state.analyser = state.audioCtx.createAnalyser();
+      state.analyser.fftSize = 2048;
+      state.analyser.smoothingTimeConstant = 0.72;
+      state.gainNode = state.audioCtx.createGain();
+      state.gainNode.gain.value = parseFloat(ui.volumeSlider.value);
+      state.analyser.connect(state.gainNode);
+      state.gainNode.connect(state.audioCtx.destination);
+      state.timeData = new Uint8Array(state.analyser.fftSize);
+      state.freqData = new Uint8Array(state.analyser.frequencyBinCount);
+    }
+  }
+
+  function readVarLen(view, cursor) {
+    let value = 0;
+    while (true) {
+      const b = view.getUint8(cursor.offset++);
+      value = (value << 7) | (b & 0x7f);
+      if ((b & 0x80) === 0) break;
+    }
+    return value;
+  }
+
+  function readAscii(view, offset, length) {
+    let s = '';
+    for (let i = 0; i < length; i++) s += String.fromCharCode(view.getUint8(offset + i));
+    return s;
+  }
+
+  function parseMidi(arrayBuffer) {
+    const view = new DataView(arrayBuffer);
+    let offset = 0;
+
+    function readU32() { const v = view.getUint32(offset); offset += 4; return v; }
+    function readU16() { const v = view.getUint16(offset); offset += 2; return v; }
+
+    if (readAscii(view, offset, 4) !== 'MThd') throw new Error('MIDIヘッダが見つかりません');
+    offset += 4;
+    const headerLength = readU32();
+    const format = readU16();
+    const trackCount = readU16();
+    const division = readU16();
+    offset += Math.max(0, headerLength - 6);
+
+    if (division & 0x8000) throw new Error('SMPTE形式のMIDIは未対応です');
+
+    const ppq = division;
+    const tempoEvents = [{ tick: 0, mpqn: 500000 }];
+    const notes = [];
+    const channelProgram = new Array(16).fill(0);
+    const channelInfos = Array.from({ length: 16 }, (_, ch) => ({
+      channel: ch,
+      noteCount: 0,
+      program: 0,
+      isDrum: ch === 9,
+      trackSet: new Set()
+    }));
+
+    for (let trackIndex = 0; trackIndex < trackCount; trackIndex++) {
+      if (readAscii(view, offset, 4) !== 'MTrk') throw new Error('MTrkが見つかりません');
+      offset += 4;
+      const trackLength = readU32();
+      const trackEnd = offset + trackLength;
+      let tick = 0;
+      let runningStatus = 0;
+      let trackName = `Track ${trackIndex + 1}`;
+      const noteStarts = new Map();
+
+      while (offset < trackEnd) {
+        const deltaRef = { offset };
+        const delta = readVarLen(view, deltaRef);
+        offset = deltaRef.offset;
+        tick += delta;
+
+        let status = view.getUint8(offset++);
+        if (status < 0x80) {
+          offset--;
+          status = runningStatus;
+        } else {
+          runningStatus = status;
+        }
+
+        if (status === 0xff) {
+          const type = view.getUint8(offset++);
+          const lenRef = { offset };
+          const len = readVarLen(view, lenRef);
+          offset = lenRef.offset;
+          if (type === 0x51 && len === 3) {
+            const mpqn = (view.getUint8(offset) << 16) | (view.getUint8(offset + 1) << 8) | view.getUint8(offset + 2);
+            tempoEvents.push({ tick, mpqn });
+          } else if (type === 0x03) {
+            let s = '';
+            for (let i = 0; i < len; i++) s += String.fromCharCode(view.getUint8(offset + i));
+            if (s.trim()) trackName = s.trim();
+          }
+          offset += len;
+          continue;
+        }
+
+        if (status === 0xf0 || status === 0xf7) {
+          const lenRef = { offset };
+          const len = readVarLen(view, lenRef);
+          offset = lenRef.offset + len;
+          continue;
+        }
+
+        const eventType = status & 0xf0;
+        const channel = status & 0x0f;
+        const data1 = view.getUint8(offset++);
+        const needsTwo = !(eventType === 0xc0 || eventType === 0xd0);
+        const data2 = needsTwo ? view.getUint8(offset++) : 0;
+
+        if (eventType === 0xc0) {
+          channelProgram[channel] = data1;
+          channelInfos[channel].program = data1;
+          continue;
+        }
+
+        if (eventType === 0x90 && data2 > 0) {
+          const key = `${channel}_${data1}`;
+          const stack = noteStarts.get(key) || [];
+          stack.push({ tick, velocity: data2, program: channelProgram[channel], trackName });
+          noteStarts.set(key, stack);
+        } else if (eventType === 0x80 || (eventType === 0x90 && data2 === 0)) {
+          const key = `${channel}_${data1}`;
+          const stack = noteStarts.get(key);
+          const start = stack && stack.length ? stack.shift() : null;
+          if (start && tick > start.tick) {
+            notes.push({
+              midi: data1,
+              startTick: start.tick,
+              endTick: tick,
+              velocity: start.velocity,
+              channel,
+              trackIndex,
+              trackName: start.trackName,
+              program: start.program,
+              isDrum: channel === 9
+            });
+            channelInfos[channel].noteCount += 1;
+            channelInfos[channel].trackSet.add(trackIndex + 1);
+          }
+          if (stack && !stack.length) noteStarts.delete(key);
+        }
+      }
+      offset = trackEnd;
+    }
+
+    tempoEvents.sort((a, b) => a.tick - b.tick);
+    const dedupTempo = [];
+    for (const ev of tempoEvents) {
+      if (dedupTempo.length && dedupTempo[dedupTempo.length - 1].tick === ev.tick) dedupTempo[dedupTempo.length - 1] = ev;
+      else dedupTempo.push(ev);
+    }
+
+    const cumSec = new Array(dedupTempo.length).fill(0);
+    for (let i = 1; i < dedupTempo.length; i++) {
+      const prev = dedupTempo[i - 1];
+      const cur = dedupTempo[i];
+      cumSec[i] = cumSec[i - 1] + (cur.tick - prev.tick) * (prev.mpqn / 1000000) / ppq;
+    }
+
+    function tickToSec(tick) {
+      let lo = 0, hi = dedupTempo.length - 1;
+      while (lo <= hi) {
+        const mid = (lo + hi) >> 1;
+        if (dedupTempo[mid].tick <= tick) lo = mid + 1;
+        else hi = mid - 1;
+      }
+      const idx = Math.max(0, hi);
+      const ev = dedupTempo[idx];
+      return cumSec[idx] + (tick - ev.tick) * (ev.mpqn / 1000000) / ppq;
+    }
+
+    const noteObjects = notes.map(n => ({ ...n, startSec: tickToSec(n.startTick), endSec: tickToSec(n.endTick) }))
+      .filter(n => n.endSec > n.startSec)
+      .sort((a, b) => a.startSec - b.startSec || a.midi - b.midi);
+
+    const durationSec = noteObjects.length ? Math.max(...noteObjects.map(n => n.endSec)) : 0;
+    const bpm = dedupTempo.length ? (60000000 / dedupTempo[0].mpqn) : 120;
+    const channels = channelInfos.filter(info => info.noteCount > 0).map(info => ({
+      channel: info.channel,
+      noteCount: info.noteCount,
+      program: info.program,
+      isDrum: info.isDrum,
+      trackIndices: Array.from(info.trackSet).sort((a, b) => a - b),
+      defaultInstrument: gmProgramToInstrument(info.program, info.isDrum)
+    }));
+
+    return { format, trackCount, ppq, notes: noteObjects, durationSec, bpm, channels };
+  }
+
+  function getInstrumentDefinition(name, duty) {
+    const table = {
+      sine: {
+        formula: 'x(t) = A sin(2πft)',
+        adsrPreset: { a: 0.004, d: 0.06, s: 0.88, r: 0.08 },
+        lowpassPreset: { cutoff: 14000, passes: 0, q: 0.7 },
+        osc: (phase) => Math.sin(phase),
+        memo: '基準波。倍音をほぼ含まない。'
+      },
+      square: {
+        formula: 'x(t) = PolyBLEP square(2πft)',
+        adsrPreset: { a: 0.003, d: 0.05, s: 0.76, r: 0.08 },
+        lowpassPreset: { cutoff: 5200, passes: 1, q: 0.9 },
+        osc: (phase) => Math.sin(phase) >= 0 ? 1 : -1,
+        memo: '矩形波。PolyBLEP で折り返し雑音を軽減。'
+      },
+      saw: {
+        formula: 'x(t) = PolyBLEP saw(2πft)',
+        adsrPreset: { a: 0.002, d: 0.08, s: 0.72, r: 0.10 },
+        lowpassPreset: { cutoff: 4800, passes: 1, q: 0.9 },
+        osc: () => 0,
+        memo: '鋸歯状波。全倍音を含み、減算合成の出発点。'
+      },
+      triangle: {
+        formula: 'x(t) = triangle(2πft)',
+        adsrPreset: { a: 0.003, d: 0.07, s: 0.80, r: 0.10 },
+        lowpassPreset: { cutoff: 7200, passes: 0, q: 0.7 },
+        osc: () => 0,
+        memo: '三角波。奇数倍音中心で square より柔らかい。'
+      },
+      supersaw: {
+        formula: 'x(t)=Σ_k saw(2π (f+Δf_k) t) / N',
+        adsrPreset: { a: 0.010, d: 0.10, s: 0.74, r: 0.18 },
+        lowpassPreset: { cutoff: 5200, passes: 1, q: 0.8 },
+        osc: () => 0,
+        memo: 'わずかに detune した saw を重ねる簡易 supersaw。'
+      },
+      fm: {
+        formula: 'x(t)=A sin(2π f_c t + I sin(2π f_m t)),  f_m = r f_c',
+        adsrPreset: { a: 0.002, d: 0.18, s: 0.40, r: 0.22 },
+        lowpassPreset: { cutoff: 9200, passes: 0, q: 0.8 },
+        osc: () => 0,
+        memo: 'FM 合成。index と ratio で倍音構造が大きく変わる。'
+      },
+      noise: {
+        formula: 'x[n] = noise[n],  y[n] = H(z) x[n]',
+        adsrPreset: { a: 0.001, d: 0.14, s: 0.00, r: 0.10 },
+        lowpassPreset: { cutoff: 3000, passes: 1, q: 0.7 },
+        osc: () => 0,
+        memo: 'ホワイトノイズを起点にした減算合成用ソース。'
+      },
+      wavetable: {
+        formula: 'x(t)=table[ frac(ft) ]',
+        adsrPreset: { a: 0.003, d: 0.09, s: 0.66, r: 0.12 },
+        lowpassPreset: { cutoff: 6000, passes: 1, q: 0.8 },
+        osc: () => 0,
+        memo: 'ウェーブテーブル。複雑な周期波形を補間しながら読む。'
+      },
+      piano: {
+        formula: 'x(t)=sin(2πft)+0.45e^(-2.8t)sin(4πft)+0.18e^(-5.2t)sin(6πft)',
+        adsrPreset: { a: 0.002, d: 0.16, s: 0.22, r: 0.26 },
+        lowpassPreset: { cutoff: 6200, passes: 2, q: 0.9 },
+        osc: (phase, t) => (
+          Math.sin(phase) +
+          0.45 * Math.exp(-2.8 * t) * Math.sin(2 * phase) +
+          0.18 * Math.exp(-5.2 * t) * Math.sin(3 * phase)
+        ),
+        memo: '減衰付き倍音合成。ピアノ風。'
+      },
+      guitar: {
+        formula: 'x(t)=sin(2πft)+0.30e^(-2.2t)sin(4πft+φ2)+0.12e^(-4.0t)sin(6πft+φ3)',
+        adsrPreset: { a: 0.001, d: 0.12, s: 0.18, r: 0.30 },
+        lowpassPreset: { cutoff: 3600, passes: 2, q: 0.8 },
+        osc: (phase, t) => (
+          Math.sin(phase) +
+          0.30 * Math.exp(-2.2 * t) * Math.sin(2 * phase + 0.25) +
+          0.12 * Math.exp(-4.0 * t) * Math.sin(3 * phase + 0.6)
+        ),
+        memo: '減衰付き倍音合成。ギター風。'
+      },
+      karplus: {
+        formula: 'y[n] = 0.5 (x[n-D] + x[n-(D+1)])',
+        adsrPreset: { a: 0.001, d: 0.08, s: 0.72, r: 0.22 },
+        lowpassPreset: { cutoff: 4600, passes: 1, q: 0.8 },
+        osc: () => 0,
+        memo: 'Karplus-Strong。短い白色雑音を遅延ループに入れ、弦の減衰を近似。'
+      },
+      drumkit: {
+        formula: 'kick/snare/hat/tom/clap/cymbal/rim/ride を減衰正弦波 + 雑音で近似',
+        adsrPreset: { a: 0.000, d: 0.08, s: 0.00, r: 0.10 },
+        lowpassPreset: { cutoff: 12000, passes: 0, q: 0.7 },
+        osc: () => 0,
+        memo: '簡易ドラム音源。主要パーカッションを式ベースで近似。'
+      }
+    };
+    return table[name] || table.sine;
+  }
+
+  function envAt(t, hold, adsr) {
+    if (t < 0) return 0;
+    if (t < adsr.a) return adsr.a <= 0 ? 1 : t / adsr.a;
+    if (t < adsr.a + adsr.d) {
+      const u = (t - adsr.a) / Math.max(adsr.d, 1e-6);
+      return 1 - (1 - adsr.s) * u;
+    }
+    if (t < hold) return adsr.s;
+    if (t < hold + adsr.r) {
+      const u = (t - hold) / Math.max(adsr.r, 1e-6);
+      return adsr.s * (1 - u);
+    }
+    return 0;
+  }
+
+  function limitPolyphony(notes, polyphony) {
+    const active = [];
+    const kept = [];
+    for (const note of notes) {
+      for (let i = active.length - 1; i >= 0; i--) {
+        if (active[i].endSec <= note.startSec) active.splice(i, 1);
+      }
+      if (active.length < polyphony) {
+        active.push(note);
+        kept.push(note);
+      } else {
+        let minIndex = 0;
+        for (let i = 1; i < active.length; i++) {
+          if (active[i].velocity < active[minIndex].velocity) minIndex = i;
+        }
+        if (note.velocity > active[minIndex].velocity) {
+          const replaced = active[minIndex];
+          const replaceIdx = kept.indexOf(replaced);
+          if (replaceIdx >= 0) kept.splice(replaceIdx, 1);
+          active[minIndex] = note;
+          kept.push(note);
+        }
+      }
+    }
+    kept.sort((a, b) => a.startSec - b.startSec || a.midi - b.midi);
+    return kept;
+  }
+
+  function updateControlDisplays() {
+    ui.attackValue.textContent = `${parseInt(ui.attackSlider.value, 10)} ms`;
+    ui.decayValue.textContent = `${parseInt(ui.decaySlider.value, 10)} ms`;
+    ui.sustainValue.textContent = `${parseFloat(ui.sustainSlider.value).toFixed(2)}`;
+    ui.releaseValue.textContent = `${parseInt(ui.releaseSlider.value, 10)} ms`;
+    ui.cutoffValue.textContent = `${parseInt(ui.cutoffSlider.value, 10)} Hz`;
+    ui.spaceMixValue.textContent = `${parseFloat(ui.spaceMixSlider.value).toFixed(2)}`;
+    ui.delayMsValue.textContent = `${parseInt(ui.delayMsSlider.value, 10)} ms`;
+    ui.feedbackValue.textContent = `${parseFloat(ui.feedbackSlider.value).toFixed(2)}`;
+    ui.densityValue.textContent = `${parseInt(ui.densitySlider.value, 10)} taps`;
+    ui.modRateValue.textContent = `${parseFloat(ui.modRateSlider.value).toFixed(1)} Hz`;
+    ui.modDepthValue.textContent = `${parseFloat(ui.modDepthSlider.value).toFixed(2)}`;
+    ui.velToCutoffValue.textContent = `${parseFloat(ui.velToCutoffSlider.value).toFixed(2)}`;
+    ui.driveValue.textContent = `${parseFloat(ui.driveSlider.value).toFixed(2)}`;
+    ui.chorusMixValue.textContent = `${parseFloat(ui.chorusMixSlider.value).toFixed(2)}`;
+    ui.chorusDepthValue.textContent = `${parseFloat(ui.chorusDepthSlider.value).toFixed(1)} ms`;
+    ui.chorusRateValue.textContent = `${parseFloat(ui.chorusRateSlider.value).toFixed(1)} Hz`;
+    ui.drumMixValue.textContent = `${parseFloat(ui.drumMixSlider.value).toFixed(2)}`;
+    ui.convMixValue.textContent = `${parseFloat(ui.convMixSlider.value).toFixed(2)}`;
+    ui.convLengthValue.textContent = `${parseInt(ui.convLengthSlider.value, 10)} ms`;
+    ui.convPredelayValue.textContent = `${parseInt(ui.convPredelaySlider.value, 10)} ms`;
+    ui.convDampingValue.textContent = `${parseFloat(ui.convDampingSlider.value).toFixed(2)}`;
+    ui.resonanceValue.textContent = `${parseFloat(ui.resonanceSlider.value).toFixed(2)}`;
+    ui.filterEnvAmountValue.textContent = `${parseFloat(ui.filterEnvAmountSlider.value).toFixed(2)}`;
+    ui.filterEnvDecayValue.textContent = `${parseInt(ui.filterEnvDecaySlider.value, 10)} ms`;
+    ui.fmRatioValue.textContent = `${parseFloat(ui.fmRatioSlider.value).toFixed(2)}`;
+    ui.fmIndexValue.textContent = `${parseFloat(ui.fmIndexSlider.value).toFixed(2)}`;
+    ui.compThresholdValue.textContent = `${parseFloat(ui.compThresholdSlider.value).toFixed(1)} dB`;
+    ui.compRatioValue.textContent = `${parseFloat(ui.compRatioSlider.value).toFixed(1)}:1`;
+    ui.compMakeupValue.textContent = `${parseFloat(ui.compMakeupSlider.value).toFixed(1)} dB`;
+    ui.eqFreqValue.textContent = `${parseInt(ui.eqFreqSlider.value, 10)} Hz`;
+    ui.eqGainValue.textContent = `${parseFloat(ui.eqGainSlider.value).toFixed(1)} dB`;
+    ui.eqQValue.textContent = `${parseFloat(ui.eqQSlider.value).toFixed(2)}`;
+    if (typeof syncWindowSelectors === 'function') {
+      syncWindowSelectors('analysis');
+    } else if (ui.windowPreviewSelect && ui.windowPreviewSelect.value !== ui.windowFunctionSelect.value) {
+      ui.windowPreviewSelect.value = ui.windowFunctionSelect.value;
+    }
+  }
+
+  function applyPresetToControls() {
+    const def = getInstrumentDefinition(ui.instrumentSelect.value, parseFloat(ui.dutySelect.value));
+    ui.attackSlider.value = String(Math.round(def.adsrPreset.a * 1000));
+    ui.decaySlider.value = String(Math.round(def.adsrPreset.d * 1000));
+    ui.sustainSlider.value = def.adsrPreset.s.toFixed(2);
+    ui.releaseSlider.value = String(Math.round(def.adsrPreset.r * 1000));
+    ui.cutoffSlider.value = String(def.lowpassPreset.cutoff);
+    ui.filterPassesSelect.value = String(def.lowpassPreset.passes);
+    ui.resonanceSlider.value = String(def.lowpassPreset.q || 0.7);
+    updateControlDisplays();
+    drawControlGraphs();
+  }
+
+  function getCurrentRenderOptions() {
+    return {
+      instrument: ui.instrumentSelect.value,
+      duty: parseFloat(ui.dutySelect.value),
+      sampleRate: parseInt(ui.sampleRateSelect.value, 10),
+      polyphony: parseInt(ui.polyphonySelect.value, 10),
+      adsr: {
+        a: parseInt(ui.attackSlider.value, 10) / 1000,
+        d: parseInt(ui.decaySlider.value, 10) / 1000,
+        s: parseFloat(ui.sustainSlider.value),
+        r: parseInt(ui.releaseSlider.value, 10) / 1000
+      },
+      lowpassCutoff: parseInt(ui.cutoffSlider.value, 10),
+      lowpassPasses: parseInt(ui.filterPassesSelect.value, 10),
+      resonanceQ: parseFloat(ui.resonanceSlider.value),
+      filterEnvAmount: parseFloat(ui.filterEnvAmountSlider.value),
+      filterEnvDecay: parseInt(ui.filterEnvDecaySlider.value, 10) / 1000,
+      spaceMix: parseFloat(ui.spaceMixSlider.value),
+      delayMs: parseInt(ui.delayMsSlider.value, 10),
+      feedback: parseFloat(ui.feedbackSlider.value),
+      density: parseInt(ui.densitySlider.value, 10),
+      lissajousMode: ui.lissajousModeSelect.value,
+      modTarget: ui.modTargetSelect.value,
+      modRate: parseFloat(ui.modRateSlider.value),
+      modDepth: parseFloat(ui.modDepthSlider.value),
+      modWaveform: ui.modWaveformSelect.value,
+      velToCutoff: parseFloat(ui.velToCutoffSlider.value),
+      drive: parseFloat(ui.driveSlider.value),
+      chorusMix: parseFloat(ui.chorusMixSlider.value),
+      chorusDepthMs: parseFloat(ui.chorusDepthSlider.value),
+      chorusRate: parseFloat(ui.chorusRateSlider.value),
+      drumMix: parseFloat(ui.drumMixSlider.value),
+      convMix: parseFloat(ui.convMixSlider.value),
+      convLengthMs: parseFloat(ui.convLengthSlider.value),
+      convPredelayMs: parseFloat(ui.convPredelaySlider.value),
+      convDamping: parseFloat(ui.convDampingSlider.value),
+      fmRatio: parseFloat(ui.fmRatioSlider.value),
+      fmIndex: parseFloat(ui.fmIndexSlider.value),
+      wavetable: ui.wavetableSelect.value,
+      windowFunction: ui.windowFunctionSelect.value,
+      oversample: parseInt(ui.oversampleSelect.value, 10),
+      compressorThresholdDb: parseFloat(ui.compThresholdSlider.value),
+      compressorRatio: parseFloat(ui.compRatioSlider.value),
+      compressorMakeupDb: parseFloat(ui.compMakeupSlider.value),
+      eqFreq: parseFloat(ui.eqFreqSlider.value),
+      eqGainDb: parseFloat(ui.eqGainSlider.value),
+      eqQ: parseFloat(ui.eqQSlider.value),
+      phaseMode: ui.phaseModeSelect.value,
+      channelInstrumentMap: getChannelInstrumentAssignments()
+    };
+  }
+
+  function polyBlep(t, dt) {
+    if (dt <= 0) return 0;
+    if (t < dt) {
+      t /= dt;
+      return t + t - t * t - 1;
+    }
+    if (t > 1 - dt) {
+      t = (t - 1) / dt;
+      return t * t + t + t + 1;
+    }
+    return 0;
+  }
+
+  function sawPolyBlep(frac, dt) {
+    let y = 2 * frac - 1;
+    y -= polyBlep(frac, dt);
+    return y;
+  }
+
+  function triangleFromFrac(frac) {
+    return 1 - 4 * Math.abs(frac - 0.5);
+  }
+
+  function sampleHoldLfo(t, rate) {
+    const step = Math.floor(t * Math.max(rate, 0.1));
+    const x = Math.sin(step * 12.9898 + 78.233) * 43758.5453;
+    return (x - Math.floor(x)) * 2 - 1;
+  }
+
+  function lfoValue(t, options) {
+    const w = options.modWaveform || 'sine';
+    const rate = Math.max(0.05, options.modRate || 0.1);
+    if (w === 'triangle') {
+      const frac = (t * rate) % 1;
+      return triangleFromFrac(frac);
+    }
+    if (w === 'square') {
+      return Math.sin(2 * Math.PI * rate * t) >= 0 ? 1 : -1;
+    }
+    if (w === 'sampleHold') {
+      return sampleHoldLfo(t, rate);
+    }
+    return Math.sin(2 * Math.PI * rate * t);
+  }
+
+  function wavetableValue(frac, mode) {
+    const x = 2 * Math.PI * frac;
+    if (mode === 'vowel') {
+      return 0.90 * Math.sin(x) + 0.55 * Math.sin(2 * x + 0.3) + 0.25 * Math.sin(4 * x + 1.1);
+    }
+    if (mode === 'odd') {
+      return Math.sin(x) + 0.35 * Math.sin(3 * x) + 0.18 * Math.sin(5 * x) + 0.08 * Math.sin(7 * x);
+    }
+    return Math.sin(x) + 0.55 * Math.sin(2 * x) + 0.30 * Math.sin(3 * x + 0.2) + 0.18 * Math.sin(5 * x + 0.6);
+  }
+
+  function oscSample(instrumentName, def, phase, t, freq, sampleRate, duty, options, phaseSeed = 0) {
+    const norm = phase / (2 * Math.PI);
+    const frac = norm - Math.floor(norm);
+    const dt = clamp(freq / sampleRate, 0, 0.5);
+    if (instrumentName === 'square') {
+      let y = frac < 0.5 ? 1 : -1;
+      y += polyBlep(frac, dt);
+      y -= polyBlep((frac + 0.5) % 1, dt);
+      return y;
+    }
+    if (instrumentName === 'famicom') {
+      const d = clamp(duty, 0.02, 0.98);
+      let y = frac < d ? 1 : -1;
+      y += polyBlep(frac, dt);
+      y -= polyBlep((frac - d + 1) % 1, dt);
+      return y;
+    }
+    if (instrumentName === 'saw') {
+      return sawPolyBlep(frac, dt);
+    }
+    if (instrumentName === 'triangle') {
+      return triangleFromFrac(frac);
+    }
+    if (instrumentName === 'supersaw') {
+      const detunes = [-0.013, 0, 0.011];
+      let sum = 0;
+      for (let i = 0; i < detunes.length; i++) {
+        const frac2 = ((phase * (1 + detunes[i]) + phaseSeed * i) / (2 * Math.PI)) % 1;
+        const u = frac2 < 0 ? frac2 + 1 : frac2;
+        sum += sawPolyBlep(u, clamp(freq * (1 + detunes[i]) / sampleRate, 0, 0.5));
+      }
+      return sum / detunes.length;
+    }
+    if (instrumentName === 'fm') {
+      const ratio = Math.max(0.1, options.fmRatio || 2.0);
+      const index = Math.max(0, options.fmIndex || 0);
+      return Math.sin(phase + index * Math.sin(phase * ratio));
+    }
+    if (instrumentName === 'wavetable') {
+      return wavetableValue(frac, options.wavetable || 'rich');
+    }
+    return def.osc(phase, t);
+  }
+
+  function cutoffToAlpha(cutoffHz, sampleRate) {
+    const dt = 1 / sampleRate;
+    const rc = 1 / (2 * Math.PI * Math.max(10, cutoffHz));
+    return dt / (rc + dt);
+  }
+
+  function rbjLowpassCoeffs(sampleRate, cutoffHz, q) {
+    const w0 = 2 * Math.PI * clamp(cutoffHz, 20, sampleRate * 0.48) / sampleRate;
+    const cosw0 = Math.cos(w0);
+    const sinw0 = Math.sin(w0);
+    const alpha = sinw0 / (2 * Math.max(0.15, q || 0.707));
+    let b0 = (1 - cosw0) / 2;
+    let b1 = 1 - cosw0;
+    let b2 = (1 - cosw0) / 2;
+    let a0 = 1 + alpha;
+    let a1 = -2 * cosw0;
+    let a2 = 1 - alpha;
+    return { b0: b0 / a0, b1: b1 / a0, b2: b2 / a0, a1: a1 / a0, a2: a2 / a0 };
+  }
+
+  function biquadStep(x, c, st) {
+    const y = c.b0 * x + st.z1;
+    st.z1 = c.b1 * x - c.a1 * y + st.z2;
+    st.z2 = c.b2 * x - c.a2 * y;
+    return y;
+  }
+
+  function resolveNoteInstrument(note, options) {
+    const sel = options.channelInstrumentMap ? options.channelInstrumentMap[note.channel] : null;
+    if (note.isDrum) return sel === 'auto' || !sel ? 'drumkit' : sel;
+    if (!sel || sel === 'auto') return gmProgramToInstrument(note.program, false);
+    return sel;
+  }
+
+  function renderDrumNote(pcm, note, sampleRate, options) {
+    const startSample = Math.floor(note.startSec * sampleRate);
+    const vel = (note.velocity / 127) * clamp(options.drumMix, 0, 1);
+    if (vel <= 0) return;
+    const midi = note.midi;
+    let lengthSec = 0.40;
+    if ([49, 57].includes(midi)) lengthSec = 1.4;
+    else if ([51, 53, 59].includes(midi)) lengthSec = 1.6;
+    else if ([42, 44, 46].includes(midi)) lengthSec = 0.18;
+    else if ([37].includes(midi)) lengthSec = 0.08;
+    else if ([39].includes(midi)) lengthSec = 0.22;
+    const total = Math.ceil(lengthSec * sampleRate);
+    let hpPrev = 0;
+    let clapEcho = 0;
+    for (let i = 0; i < total; i++) {
+      const idx = startSample + i;
+      if (idx >= pcm.length) break;
+      const t = i / sampleRate;
+      let s = 0;
+      if ([35, 36].includes(midi)) {
+        const f = 150 * Math.exp(-t * 18) + 42;
+        s = Math.sin(2 * Math.PI * f * t) * Math.exp(-t * 9);
+      } else if ([38, 40].includes(midi)) {
+        const noise = (Math.random() * 2 - 1) * Math.exp(-t * 18);
+        const body = 0.45 * Math.sin(2 * Math.PI * 180 * t) * Math.exp(-t * 16);
+        s = 0.8 * noise + body;
+      } else if ([42, 44, 46].includes(midi)) {
+        const noise = (Math.random() * 2 - 1) * Math.exp(-t * 34);
+        hpPrev += 0.18 * (noise - hpPrev);
+        s = noise - hpPrev;
+      } else if ([41, 43, 45, 47, 48, 50].includes(midi)) {
+        const f = midiToFrequency(Math.min(60, midi + 18));
+        const body = Math.sin(2 * Math.PI * f * t) * Math.exp(-t * 8);
+        s = body;
+      } else if ([39].includes(midi)) {
+        const burst = (Math.random() * 2 - 1) * Math.exp(-t * 26);
+        const gate = (Math.sin(2 * Math.PI * 13 * t) > 0.2) ? 1 : 0.18;
+        clapEcho += 0.20 * (burst - clapEcho);
+        s = (burst - clapEcho) * gate;
+      } else if ([37].includes(midi)) {
+        const body = Math.sin(2 * Math.PI * 720 * t) * Math.exp(-t * 60);
+        const click = (Math.random() * 2 - 1) * Math.exp(-t * 90);
+        s = 0.75 * body + 0.5 * click;
+      } else if ([49, 52, 55, 57].includes(midi)) {
+        const noise = (Math.random() * 2 - 1);
+        hpPrev += 0.12 * (noise - hpPrev);
+        s = (noise - hpPrev) * Math.exp(-t * 3.8) + 0.18 * Math.sin(2 * Math.PI * 6200 * t) * Math.exp(-t * 5);
+      } else if ([51, 53, 59].includes(midi)) {
+        const noise = (Math.random() * 2 - 1);
+        hpPrev += 0.09 * (noise - hpPrev);
+        s = (noise - hpPrev) * Math.exp(-t * 2.8) + 0.16 * Math.sin(2 * Math.PI * 4200 * t) * Math.exp(-t * 3.5);
+      } else {
+        const noise = (Math.random() * 2 - 1) * Math.exp(-t * 14);
+        s = noise;
+      }
+      pcm[idx] += vel * 0.60 * s;
+    }
+  }
+
+  function renderInstrumentNote(pcm, note, sampleRate, adsr, options, instrumentName) {
+    if (note.isDrum || instrumentName === 'drumkit') {
+      renderDrumNote(pcm, note, sampleRate, options);
+      return;
+    }
+    if (instrumentName === 'karplus') {
+      renderKarplusStrongNote(pcm, note, sampleRate, adsr);
+      return;
+    }
+
+    const def = getInstrumentDefinition(instrumentName, options.duty);
+    const baseFreq = midiToFrequency(note.midi);
+    const velNorm = note.velocity / 127;
+    const amp = velNorm * 0.22;
+    const startSample = Math.floor(note.startSec * sampleRate);
+    const hold = Math.max(0.01, note.endSec - note.startSec);
+    const noteSamples = Math.ceil((hold + adsr.r) * sampleRate);
+    let phase = 0;
+    let noiseState = 0;
+    let lp1 = { z1: 0, z2: 0 };
+    let lp2 = { z1: 0, z2: 0 };
+    let coeff = rbjLowpassCoeffs(sampleRate, options.lowpassCutoff, options.resonanceQ);
+    let coeffCounter = 0;
+    const phaseSeed = (note.midi * 0.137 + note.startSec * 0.731) % 1;
+
+    for (let i = 0; i < noteSamples; i++) {
+      const idx = startSample + i;
+      if (idx >= pcm.length) break;
+      const t = i / sampleRate;
+      const env = envAt(t, hold, adsr);
+      if (env <= 0) continue;
+
+      const lfo = options.modTarget === 'none' ? 0 : lfoValue(t, options);
+      let freqNow = baseFreq;
+      if (options.modTarget === 'pitch') {
+        freqNow *= Math.max(0.25, 1 + 0.08 * options.modDepth * lfo);
+      }
+      phase += 2 * Math.PI * freqNow / sampleRate;
+      let sample;
+      if (instrumentName === 'noise') {
+        const white = Math.random() * 2 - 1;
+        noiseState = 0.985 * noiseState + 0.12 * white;
+        sample = noiseState;
+      } else {
+        sample = oscSample(instrumentName, def, phase, t, freqNow, sampleRate, options.duty, options, phaseSeed);
+      }
+      let gain = amp * env;
+      if (options.modTarget === 'amp') {
+        gain *= Math.max(0, 1 + 0.70 * options.modDepth * lfo);
+      }
+      sample *= gain;
+
+      let cutoff = options.lowpassCutoff;
+      if (options.velToCutoff > 0) {
+        cutoff *= 0.55 + velNorm * (0.45 + 2.2 * options.velToCutoff);
+      }
+      if (options.filterEnvAmount > 0) {
+        const fe = Math.exp(-t / Math.max(0.005, options.filterEnvDecay || 0.12));
+        cutoff *= 1 + options.filterEnvAmount * fe;
+      }
+      if (options.modTarget === 'filter') {
+        cutoff *= 0.75 + 1.6 * options.modDepth * (0.5 + 0.5 * lfo);
+      }
+      cutoff = clamp(cutoff, 60, sampleRate * 0.48);
+      if (options.velToCutoff > 0 || options.modTarget === 'filter' || options.filterEnvAmount > 0 || options.resonanceQ > 0.71) {
+        if (coeffCounter++ % 12 === 0) {
+          coeff = rbjLowpassCoeffs(sampleRate, cutoff, options.resonanceQ);
+        }
+        sample = biquadStep(sample, coeff, lp1);
+        if (options.lowpassPasses > 1) {
+          sample = biquadStep(sample, coeff, lp2);
+        }
+      }
+      pcm[idx] += sample;
+    }
+  }
+
+  function applyDriveInPlace(left, right, amount) {
+    const drive = clamp(amount || 0, 0, 1);
+    if (drive <= 0) return;
+    const gain = 1 + drive * 18;
+    const norm = Math.tanh(gain);
+    for (let i = 0; i < left.length; i++) {
+      left[i] = Math.tanh(left[i] * gain) / norm;
+      right[i] = Math.tanh(right[i] * gain) / norm;
+    }
+  }
+
+  function applyChorusToStereo(leftIn, rightIn, sampleRate, options) {
+    const mix = clamp(options.chorusMix || 0, 0, 1);
+    if (mix <= 0) return { left: leftIn.slice(), right: rightIn.slice() };
+    const depthMs = Math.max(0, options.chorusDepthMs || 0);
+    const rate = Math.max(0.05, options.chorusRate || 0.8);
+    const baseDelayMs = 18;
+    const n = leftIn.length;
+    const left = new Float32Array(n);
+    const right = new Float32Array(n);
+    const depthSamp = depthMs * sampleRate / 1000;
+    const baseSamp = baseDelayMs * sampleRate / 1000;
+
+    function sampleDelay(arr, pos) {
+      if (pos <= 0) return arr[0] || 0;
+      if (pos >= arr.length - 1) return arr[arr.length - 1] || 0;
+      const i0 = Math.floor(pos);
+      const frac = pos - i0;
+      return arr[i0] * (1 - frac) + arr[i0 + 1] * frac;
+    }
+
+    for (let i = 0; i < n; i++) {
+      const t = i / sampleRate;
+      const modL = Math.sin(2 * Math.PI * rate * t);
+      const modR = Math.sin(2 * Math.PI * rate * t + Math.PI / 2);
+      const posL = i - baseSamp - depthSamp * (0.5 + 0.5 * modL);
+      const posR = i - baseSamp - depthSamp * (0.5 + 0.5 * modR);
+      const wetL = sampleDelay(leftIn, posL);
+      const wetR = sampleDelay(rightIn, posR);
+      left[i] = leftIn[i] * (1 - 0.45 * mix) + wetL * mix;
+      right[i] = rightIn[i] * (1 - 0.45 * mix) + wetR * mix;
+    }
+    return { left, right };
+  }
+
+  function renderKarplusStrongNote(pcm, note, sampleRate, adsr) {
+    const freq = midiToFrequency(note.midi);
+    const amp = (note.velocity / 127) * 0.34;
+    const startSample = Math.floor(note.startSec * sampleRate);
+    const hold = Math.max(0.03, note.endSec - note.startSec);
+    const total = Math.ceil((hold + adsr.r + 0.12) * sampleRate);
+    const delay = Math.max(2, Math.round(sampleRate / Math.max(20, freq)));
+    const line = new Float32Array(delay + 1);
+    for (let i = 0; i < line.length; i++) line[i] = (Math.random() * 2 - 1) * amp;
+    let cursor = 0;
+    const damping = 0.996 - Math.min(0.08, freq / sampleRate);
+
+    for (let i = 0; i < total; i++) {
+      const idx = startSample + i;
+      if (idx >= pcm.length) break;
+      const t = i / sampleRate;
+      const env = envAt(t, hold, adsr);
+      if (env <= 0) continue;
+      const a = line[cursor];
+      const b = line[(cursor + 1) % line.length];
+      const y = 0.5 * (a + b) * damping;
+      line[cursor] = y;
+      cursor = (cursor + 1) % line.length;
+      pcm[idx] += env * y;
+    }
+  }
+
+  function applySpaceEffectToStereo(dry, sampleRate, options) {
+    const n = dry.length;
+    const left = new Float32Array(n);
+    const right = new Float32Array(n);
+    const mix = clamp(options.spaceMix || 0, 0, 1);
+    const feedback = clamp(options.feedback || 0, 0, 0.97);
+    const density = clamp(options.density || 1, 1, 5);
+    const baseDelay = Math.max(1, Math.round(sampleRate * Math.max(10, options.delayMs || 120) / 1000));
+    const spacing = Math.max(8, Math.floor(baseDelay / (density + 1)));
+
+    for (let i = 0; i < n; i++) {
+      const dryGain = 1 - 0.35 * mix;
+      left[i] = dry[i] * dryGain;
+      right[i] = dry[i] * dryGain;
+    }
+
+    for (let tap = 0; tap < density; tap++) {
+      const delay = baseDelay + tap * spacing + tap * tap * 11;
+      const gain = mix * Math.pow(0.68, tap + 1);
+      const panL = tap % 2 === 0 ? 0.95 : 0.45;
+      const panR = tap % 2 === 0 ? 0.45 : 0.95;
+      for (let i = delay; i < n; i++) {
+        const src = dry[i - delay];
+        const fb = i - 2 * delay >= 0 ? dry[i - 2 * delay] * feedback * 0.75 : 0;
+        const val = gain * (src + fb);
+        left[i] += val * panL;
+        right[i] += val * panR;
+      }
+    }
+
+    let prevL = 0;
+    let prevR = 0;
+    const diffusion = 0.16 + 0.08 * density;
+    for (let i = 0; i < n; i++) {
+      prevL += diffusion * (left[i] - prevL);
+      prevR += diffusion * (right[i] - prevR);
+      left[i] = prevL;
+      right[i] = prevR;
+    }
+
+    return { left, right };
+  }
+
+  function applyLowpassInPlace(pcm, sampleRate, cutoffHz, passes) {
+    if (!passes || cutoffHz >= sampleRate * 0.48) return;
+    const dt = 1 / sampleRate;
+    const rc = 1 / (2 * Math.PI * Math.max(10, cutoffHz));
+    const alpha = dt / (rc + dt);
+    for (let pass = 0; pass < passes; pass++) {
+      let y = pcm[0] || 0;
+      for (let i = 1; i < pcm.length; i++) {
+        y += alpha * (pcm[i] - y);
+        pcm[i] = y;
+      }
+    }
+  }
+
+  function applyParametricEqInPlace(left, right, sampleRate, options) {
+    const gainDb = options.eqGainDb || 0;
+    if (Math.abs(gainDb) < 0.01) return;
+    const freq = clamp(options.eqFreq || 1000, 20, sampleRate * 0.45);
+    const q = Math.max(0.2, options.eqQ || 0.9);
+    const A = Math.pow(10, gainDb / 40);
+    const w0 = 2 * Math.PI * freq / sampleRate;
+    const alpha = Math.sin(w0) / (2 * q);
+    const cosw0 = Math.cos(w0);
+    let b0 = 1 + alpha * A;
+    let b1 = -2 * cosw0;
+    let b2 = 1 - alpha * A;
+    let a0 = 1 + alpha / A;
+    let a1 = -2 * cosw0;
+    let a2 = 1 - alpha / A;
+    const c = { b0: b0 / a0, b1: b1 / a0, b2: b2 / a0, a1: a1 / a0, a2: a2 / a0 };
+    const stL = { z1: 0, z2: 0 };
+    const stR = { z1: 0, z2: 0 };
+    for (let i = 0; i < left.length; i++) {
+      left[i] = biquadStep(left[i], c, stL);
+      right[i] = biquadStep(right[i], c, stR);
+    }
+  }
+
+  function applyCompressorStereo(left, right, sampleRate, options) {
+    const thresholdDb = options.compressorThresholdDb ?? -12;
+    const ratio = Math.max(1, options.compressorRatio || 1);
+    const makeup = Math.pow(10, (options.compressorMakeupDb || 0) / 20);
+    if (ratio <= 1.01 && makeup === 1) return;
+    const attack = Math.exp(-1 / (sampleRate * 0.006));
+    const release = Math.exp(-1 / (sampleRate * 0.090));
+    const threshold = Math.pow(10, thresholdDb / 20);
+    let env = 0;
+    for (let i = 0; i < left.length; i++) {
+      const x = Math.max(Math.abs(left[i]), Math.abs(right[i]));
+      if (x > env) env = attack * env + (1 - attack) * x;
+      else env = release * env + (1 - release) * x;
+      let gain = 1;
+      if (env > threshold && ratio > 1.01) {
+        const envDb = 20 * Math.log10(env + 1e-9);
+        const overDb = envDb - thresholdDb;
+        const reducedDb = overDb / ratio;
+        const gainDb = -(overDb - reducedDb);
+        gain = Math.pow(10, gainDb / 20);
+      }
+      left[i] *= gain * makeup;
+      right[i] *= gain * makeup;
+    }
+  }
+
+  function downsamplePCM(src, factor) {
+    if (!factor || factor <= 1) return src;
+    const n = Math.ceil(src.length / factor);
+    const out = new Float32Array(n);
+    for (let i = 0; i < n; i++) {
+      let sum = 0;
+      let cnt = 0;
+      for (let k = 0; k < factor; k++) {
+        const idx = i * factor + k;
+        if (idx >= src.length) break;
+        sum += src[idx];
+        cnt += 1;
+      }
+      out[i] = cnt ? sum / cnt : 0;
+    }
+    return out;
+  }
+
+  function rbjPeakingCoeffs(sampleRate, freq, q, gainDb) {
+    const A = Math.pow(10, gainDb / 40);
+    const w0 = 2 * Math.PI * clamp(freq, 20, sampleRate * 0.45) / sampleRate;
+    const alpha = Math.sin(w0) / (2 * Math.max(0.2, q || 0.9));
+    const cosw0 = Math.cos(w0);
+    let b0 = 1 + alpha * A;
+    let b1 = -2 * cosw0;
+    let b2 = 1 - alpha * A;
+    let a0 = 1 + alpha / A;
+    let a1 = -2 * cosw0;
+    let a2 = 1 - alpha / A;
+    return { b0: b0 / a0, b1: b1 / a0, b2: b2 / a0, a1: a1 / a0, a2: a2 / a0 };
+  }
+
+  function buildSparseConvolutionIR(sampleRate, options) {
+    const mix = clamp(options.convMix || 0, 0, 1);
+    const lengthSec = Math.max(0.05, (options.convLengthMs || 420) / 1000);
+    const preDelaySec = Math.max(0, (options.convPredelayMs || 18) / 1000);
+    const damping = clamp(options.convDamping || 0.58, 0.05, 0.98);
+    const totalSamples = Math.max(32, Math.floor((preDelaySec + lengthSec) * sampleRate));
+    const left = new Float32Array(totalSamples);
+    const right = new Float32Array(totalSamples);
+    left[0] = 1;
+    right[0] = 1;
+    const preDelaySamp = Math.floor(preDelaySec * sampleRate);
+    const early = [0.0, 0.011, 0.019, 0.031, 0.047, 0.071];
+    for (let i = 0; i < early.length; i++) {
+      const pos = preDelaySamp + Math.min(totalSamples - 1, Math.floor(early[i] * sampleRate));
+      const g = Math.pow(0.72, i + 1);
+      if (pos < totalSamples) {
+        left[pos] += g * (0.9 - 0.1 * (i % 2));
+        right[pos] += g * (0.6 + 0.3 * (i % 2));
+      }
+    }
+    const denseCount = Math.min(220, Math.max(48, Math.floor(lengthSec * 180)));
+    for (let i = 0; i < denseCount; i++) {
+      const u = i / Math.max(1, denseCount - 1);
+      const t = preDelaySec + Math.pow(u, 1.35) * lengthSec;
+      const pos = Math.min(totalSamples - 1, Math.floor(t * sampleRate));
+      const env = Math.exp(-3.5 * u) * (0.65 + 0.35 * damping);
+      const noise = (Math.sin(i * 12.9898 + 78.233) * 43758.5453) % 1;
+      const signed = ((noise - Math.floor(noise)) * 2 - 1);
+      const pan = 0.5 + 0.45 * Math.sin(0.37 * i + 0.6);
+      const val = env * signed * 0.18 * (0.25 + 0.75 * mix);
+      left[pos] += val * (1 - 0.35 * pan);
+      right[pos] += val * (0.65 + 0.35 * pan);
+    }
+    return { left, right, sampleRate, totalSamples, lengthSec, preDelaySec, damping };
+  }
+
+  function convolveSparseStereo(leftIn, rightIn, ir, mix) {
+    const wetL = new Float32Array(leftIn.length);
+    const wetR = new Float32Array(rightIn.length);
+    const tapsL = [];
+    const tapsR = [];
+    for (let i = 0; i < ir.left.length; i++) {
+      const v = ir.left[i];
+      if (Math.abs(v) > 1e-5) tapsL.push([i, v]);
+    }
+    for (let i = 0; i < ir.right.length; i++) {
+      const v = ir.right[i];
+      if (Math.abs(v) > 1e-5) tapsR.push([i, v]);
+    }
+    for (const [delay, gain] of tapsL) {
+      for (let n = delay; n < wetL.length; n++) wetL[n] += leftIn[n - delay] * gain;
+    }
+    for (const [delay, gain] of tapsR) {
+      for (let n = delay; n < wetR.length; n++) wetR[n] += rightIn[n - delay] * gain;
+    }
+    const outL = new Float32Array(leftIn.length);
+    const outR = new Float32Array(rightIn.length);
+    const dryGain = 1 - 0.55 * mix;
+    const wetGain = mix;
+    for (let i = 0; i < outL.length; i++) {
+      outL[i] = leftIn[i] * dryGain + wetL[i] * wetGain;
+      outR[i] = rightIn[i] * dryGain + wetR[i] * wetGain;
+    }
+    return { left: outL, right: outR };
+  }
+
+  function applyConvolutionReverbToStereo(leftIn, rightIn, sampleRate, options) {
+    const mix = clamp(options.convMix || 0, 0, 1);
+    if (mix <= 0) {
+      return { left: leftIn.slice(), right: rightIn.slice(), irPreview: buildSparseConvolutionIR(sampleRate, { ...options, convMix: 0 }) };
+    }
+    const ir = buildSparseConvolutionIR(sampleRate, options);
+    const convolved = convolveSparseStereo(leftIn, rightIn, ir, mix);
+    return { left: convolved.left, right: convolved.right, irPreview: ir };
+  }
+
+  async function renderNotesToPCM(notes, options) {
+    const baseDef = getInstrumentDefinition(options.instrument, options.duty);
+    const adsr = options.adsr || baseDef.adsrPreset;
+    const limitedNotes = limitPolyphony(notes, options.polyphony);
+    const oversample = Math.max(1, Math.min(2, options.oversample || 1));
+    const outSampleRate = options.sampleRate;
+    const sampleRate = outSampleRate * oversample;
+    const tail = adsr.r + 0.80 + (options.delayMs || 0) / 1000 * (options.density || 1) * 0.8 + (options.chorusDepthMs || 0) / 1000 + (options.convLengthMs || 0) / 1000;
+    const durationSec = limitedNotes.length ? Math.max(...limitedNotes.map(n => n.endSec)) + tail : 0;
+
+    if (durationSec > 600.0) throw new Error('10分を超えるMIDIです。短いファイルか低い設定で試してください');
+
+    const totalSamples = Math.max(1, Math.ceil(durationSec * sampleRate));
+    if (totalSamples > 42000000) throw new Error('レンダリング量が大きすぎます。22050Hz または polyphony / oversampling を下げてください');
+
+    const dryPCMHigh = new Float32Array(totalSamples);
+
+    for (let noteIndex = 0; noteIndex < limitedNotes.length; noteIndex++) {
+      const note = limitedNotes[noteIndex];
+      const instName = resolveNoteInstrument(note, options);
+      renderInstrumentNote(dryPCMHigh, note, sampleRate, adsr, options, instName);
+      if (noteIndex % 12 === 0) {
+        ui.progressText.textContent = `${Math.floor((noteIndex / Math.max(limitedNotes.length, 1)) * 100)}%`;
+        await new Promise(resolve => setTimeout(resolve, 0));
+      }
+    }
+
+    applyLowpassInPlace(dryPCMHigh, sampleRate, options.lowpassCutoff, options.lowpassPasses);
+    let stereoHigh = applySpaceEffectToStereo(dryPCMHigh, sampleRate, options);
+    stereoHigh = applyChorusToStereo(stereoHigh.left, stereoHigh.right, sampleRate, options);
+    const convProcessed = applyConvolutionReverbToStereo(stereoHigh.left, stereoHigh.right, sampleRate, options);
+    stereoHigh = { left: convProcessed.left, right: convProcessed.right };
+    applyDriveInPlace(stereoHigh.left, stereoHigh.right, options.drive);
+    applyParametricEqInPlace(stereoHigh.left, stereoHigh.right, sampleRate, options);
+    applyCompressorStereo(stereoHigh.left, stereoHigh.right, sampleRate, options);
+
+    const dryPCM = downsamplePCM(dryPCMHigh, oversample);
+    const left = downsamplePCM(stereoHigh.left, oversample);
+    const right = downsamplePCM(stereoHigh.right, oversample);
+    const irPreview = {
+      left: downsamplePCM(convProcessed.irPreview.left, oversample),
+      right: downsamplePCM(convProcessed.irPreview.right, oversample),
+      sampleRate: outSampleRate,
+      totalSamples: Math.ceil(convProcessed.irPreview.totalSamples / oversample),
+      lengthSec: convProcessed.irPreview.lengthSec,
+      preDelaySec: convProcessed.irPreview.preDelaySec,
+      damping: convProcessed.irPreview.damping
+    };
+
+    let maxAbs = 0;
+    for (let i = 0; i < dryPCM.length; i++) {
+      const a = Math.max(Math.abs(dryPCM[i]), Math.abs(left[i]), Math.abs(right[i]));
+      if (a > maxAbs) maxAbs = a;
+    }
+    const norm = maxAbs > 0.98 ? 0.98 / maxAbs : 1;
+    for (let i = 0; i < dryPCM.length; i++) {
+      dryPCM[i] *= norm;
+      left[i] *= norm;
+      right[i] *= norm;
+    }
+
+    ui.progressText.textContent = '100%';
+    return {
+      pcm: dryPCM,
+      dryPCM,
+      leftPCM: left,
+      rightPCM: right,
+      sampleRate: outSampleRate,
+      internalSampleRate: sampleRate,
+      oversample,
+      durationSec,
+      noteCount: limitedNotes.length,
+      adsr,
+      lowpassCutoff: options.lowpassCutoff,
+      lowpassPasses: options.lowpassPasses,
+      resonanceQ: options.resonanceQ,
+      filterEnvAmount: options.filterEnvAmount,
+      filterEnvDecay: options.filterEnvDecay,
+      spaceMix: options.spaceMix,
+      delayMs: options.delayMs,
+      feedback: options.feedback,
+      density: options.density,
+      instrument: options.instrument,
+      modTarget: options.modTarget,
+      modRate: options.modRate,
+      modDepth: options.modDepth,
+      modWaveform: options.modWaveform,
+      velToCutoff: options.velToCutoff,
+      drive: options.drive,
+      chorusMix: options.chorusMix,
+      chorusDepthMs: options.chorusDepthMs,
+      chorusRate: options.chorusRate,
+      drumMix: options.drumMix,
+      convMix: options.convMix,
+      convLengthMs: options.convLengthMs,
+      convPredelayMs: options.convPredelayMs,
+      convDamping: options.convDamping,
+      irPreview,
+      fmRatio: options.fmRatio,
+      fmIndex: options.fmIndex,
+      wavetable: options.wavetable,
+      compressorThresholdDb: options.compressorThresholdDb,
+      compressorRatio: options.compressorRatio,
+      compressorMakeupDb: options.compressorMakeupDb,
+      eqFreq: options.eqFreq,
+      eqGainDb: options.eqGainDb,
+      eqQ: options.eqQ,
+      windowFunction: options.windowFunction,
+      channelInstrumentMap: options.channelInstrumentMap
+    };
+  }
+
+  function pcmToAudioBuffer(rendered) {
+    ensureAudio();
+    const buffer = state.audioCtx.createBuffer(2, rendered.leftPCM.length, rendered.sampleRate);
+    buffer.copyToChannel(rendered.leftPCM, 0);
+    buffer.copyToChannel(rendered.rightPCM, 1);
+    return buffer;
+  }
+
+  function createWavBlob(rendered) {
+    const channels = 2;
+    const frames = rendered.leftPCM.length;
+    const bytesPerSample = 2;
+    const blockAlign = channels * bytesPerSample;
+    const byteRate = rendered.sampleRate * blockAlign;
+    const dataSize = frames * blockAlign;
+    const buffer = new ArrayBuffer(44 + dataSize);
+    const view = new DataView(buffer);
+    let off = 0;
+    const writeStr = (s) => { for (let i = 0; i < s.length; i++) view.setUint8(off++, s.charCodeAt(i)); };
+    const write16 = (v) => { view.setUint16(off, v, true); off += 2; };
+    const write32 = (v) => { view.setUint32(off, v, true); off += 4; };
+    writeStr('RIFF');
+    write32(36 + dataSize);
+    writeStr('WAVE');
+    writeStr('fmt ');
+    write32(16);
+    write16(1);
+    write16(channels);
+    write32(rendered.sampleRate);
+    write32(byteRate);
+    write16(blockAlign);
+    write16(16);
+    writeStr('data');
+    write32(dataSize);
+    for (let i = 0; i < frames; i++) {
+      const l = Math.max(-1, Math.min(1, rendered.leftPCM[i] || 0));
+      const r = Math.max(-1, Math.min(1, rendered.rightPCM[i] || 0));
+      view.setInt16(off, l < 0 ? l * 0x8000 : l * 0x7fff, true); off += 2;
+      view.setInt16(off, r < 0 ? r * 0x8000 : r * 0x7fff, true); off += 2;
+    }
+    return new Blob([buffer], { type: 'audio/wav' });
+  }
+
+  function downloadRenderedWav() {
+    if (!state.renderedPCM) {
+      setStatus('先にレンダリングしてください');
+      return;
+    }
+    const blob = createWavBlob(state.renderedPCM);
+    const a = document.createElement('a');
+    const base = String(ui.fileName.textContent || 'rendered_audio').replace(/\.[^.]+$/, '');
+    const url = URL.createObjectURL(blob);
+    a.href = url;
+    a.download = `${base || 'rendered_audio'}.wav`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+    setStatus('WAVを書き出しました');
+  }
+
+  function stopPlayback(resetOffset = true) {
+    if (state.source) {
+      try { state.source.stop(); } catch (_) {}
+      state.source.disconnect();
+      state.source = null;
+    }
+    state.isPlaying = false;
+    cancelAnimationFrame(state.rafId);
+    if (resetOffset) {
+      state.pauseOffset = 0;
+      ui.seekSlider.value = '0';
+    }
+    ui.playBtn.disabled = !state.renderedAudioBuffer;
+    ui.pauseBtn.disabled = true;
+    ui.downloadWavBtn.disabled = !state.renderedPCM;
+    ui.stopBtn.disabled = !state.renderedAudioBuffer;
+    syncKeyboardHighlights(resetOffset ? 0 : state.pauseOffset);
+    drawPianoRoll(resetOffset ? 0 : state.pauseOffset);
+    drawPhaseScope();
+  }
+
+  function currentPlaybackTime() {
+    if (!state.renderedAudioBuffer || !state.audioCtx) return 0;
+    if (!state.isPlaying) return state.pauseOffset;
+    return clamp(state.audioCtx.currentTime - state.playStartedAt, 0, state.renderedAudioBuffer.duration);
+  }
+
+  function drawOverviewWaveform(pcm) {
+    const canvas = ui.overviewWaveCanvas;
+    const ctx = canvas.getContext('2d');
+    const { width, height } = canvas;
+    ctx.clearRect(0, 0, width, height);
+    ctx.fillStyle = '#020617';
+    ctx.fillRect(0, 0, width, height);
+    ctx.strokeStyle = '#334155';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(0, height / 2);
+    ctx.lineTo(width, height / 2);
+    ctx.stroke();
+
+    ctx.strokeStyle = '#22c55e';
+    ctx.lineWidth = 1;
+    const step = Math.max(1, Math.floor(pcm.length / width));
+    ctx.beginPath();
+    for (let x = 0; x < width; x++) {
+      const start = x * step;
+      const end = Math.min(pcm.length, start + step);
+      let min = 1, max = -1;
+      for (let i = start; i < end; i++) {
+        const v = pcm[i];
+        if (v < min) min = v;
+        if (v > max) max = v;
+      }
+      const y1 = (1 - max) * 0.5 * height;
+      const y2 = (1 - min) * 0.5 * height;
+      ctx.moveTo(x, y1);
+      ctx.lineTo(x, y2);
+    }
+    ctx.stroke();
+  }
+
+  function initSpectrogram() {
+    const canvas = ui.spectrogramCanvas;
+    state.specCtx = canvas.getContext('2d');
+    state.specCtx.fillStyle = '#020617';
+    state.specCtx.fillRect(0, 0, canvas.width, canvas.height);
+  }
+
+  function drawCurrentWaveform() {
+    const canvas = ui.liveWaveCanvas;
+    const ctx = canvas.getContext('2d');
+    const { width, height } = canvas;
+    ctx.clearRect(0, 0, width, height);
+    ctx.fillStyle = '#020617';
+    ctx.fillRect(0, 0, width, height);
+
+    ctx.strokeStyle = '#334155';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(0, height / 2);
+    ctx.lineTo(width, height / 2);
+    ctx.stroke();
+
+    if (!state.renderedPCM) return;
+    const pcmL = state.renderedPCM.leftPCM || state.renderedPCM.dryPCM;
+    const pcmR = state.renderedPCM.rightPCM || state.renderedPCM.dryPCM;
+    if (!pcmL || !pcmR || !pcmL.length) return;
+
+    const sampleRate = state.renderedPCM.sampleRate;
+    const center = Math.floor(currentPlaybackTime() * sampleRate);
+    const halfSpan = Math.min(Math.floor(sampleRate * 0.012), Math.floor(pcmL.length / 2));
+    const start = clamp(center - halfSpan, 0, Math.max(0, pcmL.length - 2));
+    const end = clamp(center + halfSpan, start + 1, pcmL.length);
+    const len = Math.max(1, end - start);
+
+    ctx.strokeStyle = '#22c55e';
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    for (let x = 0; x < width; x++) {
+      const pos = start + Math.floor((x / Math.max(1, width - 1)) * (len - 1));
+      const v = 0.5 * ((pcmL[pos] || 0) + (pcmR[pos] || 0));
+      const y = height * (0.5 - 0.42 * clamp(v, -1, 1));
+      if (x === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+
+    const centerX = Math.floor(((center - start) / len) * width);
+    ctx.strokeStyle = '#f59e0b';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(centerX, 0);
+    ctx.lineTo(centerX, height);
+    ctx.stroke();
+
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '12px sans-serif';
+    ctx.fillText('time vs amplitude  現在位置の前後約24 ms', 10, 18);
+  }
+
+  function drawLissajous() {
+    const canvas = ui.lissajousCanvas;
+    const ctx = canvas.getContext('2d');
+    const { width, height } = canvas;
+    ctx.clearRect(0, 0, width, height);
+    ctx.fillStyle = '#020617';
+    ctx.fillRect(0, 0, width, height);
+
+    ctx.strokeStyle = '#334155';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(width / 2, 0);
+    ctx.lineTo(width / 2, height);
+    ctx.moveTo(0, height / 2);
+    ctx.lineTo(width, height / 2);
+    ctx.stroke();
+
+    if (!state.renderedPCM || !state.renderedPCM.dryPCM) return;
+    const sampleRate = state.renderedPCM.sampleRate;
+    const center = Math.floor(currentPlaybackTime() * sampleRate);
+    const span = Math.min(1400, state.renderedPCM.dryPCM.length);
+    const start = clamp(center - span, 0, Math.max(0, state.renderedPCM.dryPCM.length - span));
+    const mode = ui.lissajousModeSelect.value;
+
+    ctx.strokeStyle = '#38bdf8';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    let started = false;
+    for (let i = 0; i < span; i += 2) {
+      const idx = start + i;
+      let xVal = 0;
+      let yVal = 0;
+      if (mode === 'lr' && state.renderedPCM.leftPCM && state.renderedPCM.rightPCM) {
+        xVal = state.renderedPCM.leftPCM[idx] || 0;
+        yVal = state.renderedPCM.rightPCM[idx] || 0;
+      } else {
+        xVal = state.renderedPCM.dryPCM[idx] || 0;
+        const wet = 0.5 * ((state.renderedPCM.leftPCM[idx] || 0) + (state.renderedPCM.rightPCM[idx] || 0));
+        yVal = wet;
+      }
+      const x = width * (0.5 + 0.42 * clamp(xVal, -1, 1));
+      const y = height * (0.5 - 0.42 * clamp(yVal, -1, 1));
+      if (!started) {
+        ctx.moveTo(x, y);
+        started = true;
+      } else {
+        ctx.lineTo(x, y);
+      }
+    }
+    ctx.stroke();
+
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '12px sans-serif';
+    if (mode === 'lr') ctx.fillText('x = Left, y = Right', 10, 18);
+    else ctx.fillText('x = Dry, y = Wet', 10, 18);
+  }
+
+  function drawLinearFFT() {
+    const canvas = ui.linearFftCanvas;
+    const ctx = canvas.getContext('2d');
+    const { width, height } = canvas;
+    const data = state.freqData;
+    const nyquist = state.audioCtx.sampleRate / 2;
+    const maxHz = nyquist;
+
+    ctx.clearRect(0, 0, width, height);
+    ctx.fillStyle = '#020617';
+    ctx.fillRect(0, 0, width, height);
+
+    const freqToX = (f) => (f / maxHz) * width;
+    const magToY = (mag) => (1 - clamp(mag, 0, 1)) * (height - 20);
+
+    ctx.strokeStyle = '#334155';
+    ctx.lineWidth = 1;
+    [0.25, 0.50, 0.75, 1.00].forEach((mag) => {
+      const y = magToY(mag);
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(width, y);
+      ctx.stroke();
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '12px sans-serif';
+      ctx.fillText(mag.toFixed(2), 8, Math.max(12, y - 4));
+    });
+
+    [1000, 2000, 5000, 10000, 15000, 20000].forEach((f) => {
+      if (f >= maxHz) return;
+      const x = freqToX(f);
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, height - 20);
+      ctx.stroke();
+      ctx.fillStyle = '#94a3b8';
+      ctx.fillText(f >= 1000 ? `${(f / 1000).toFixed(f % 1000 === 0 ? 0 : 1)}k` : `${f}`, x + 3, height - 5);
+    });
+
+    ctx.strokeStyle = '#38bdf8';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    let started = false;
+    for (let i = 1; i < data.length; i++) {
+      const freq = i * state.audioCtx.sampleRate / state.analyser.fftSize;
+      const mag = data[i] / 255;
+      const x = freqToX(freq);
+      const y = magToY(mag);
+      if (!started) {
+        ctx.moveTo(x, y);
+        started = true;
+      } else {
+        ctx.lineTo(x, y);
+      }
+    }
+    ctx.stroke();
+
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '12px sans-serif';
+    ctx.fillText('linear frequency axis / normalized magnitude', 10, 18);
+  }
+
+  function drawFFT() {
+    const canvas = ui.fftCanvas;
+    const ctx = canvas.getContext('2d');
+    const { width, height } = canvas;
+    const data = state.freqData;
+    const nyquist = state.audioCtx.sampleRate / 2;
+    const minHz = 20;
+    const maxHz = Math.max(minHz * 2, nyquist);
+
+    ctx.clearRect(0, 0, width, height);
+    ctx.fillStyle = '#020617';
+    ctx.fillRect(0, 0, width, height);
+
+    const dbMin = -72;
+    const dbMax = 0;
+    const freqToX = (f) => {
+      const a = Math.log10(Math.max(minHz, f));
+      const b = Math.log10(maxHz);
+      const m = Math.log10(minHz);
+      return ((a - m) / (b - m)) * width;
+    };
+    const dbToY = (db) => ((dbMax - db) / (dbMax - dbMin)) * (height - 20);
+
+    ctx.strokeStyle = '#334155';
+    ctx.lineWidth = 1;
+    [-60, -48, -36, -24, -12, 0].forEach((db) => {
+      const y = dbToY(db);
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(width, y);
+      ctx.stroke();
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '12px sans-serif';
+      ctx.fillText(`${db} dB`, 8, Math.max(12, y - 4));
+    });
+
+    [20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000].forEach((f) => {
+      if (f >= maxHz) return;
+      const x = freqToX(f);
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, height - 20);
+      ctx.stroke();
+      ctx.fillStyle = '#94a3b8';
+      ctx.fillText(f >= 1000 ? `${(f / 1000).toFixed(f % 1000 === 0 ? 0 : 1)}k` : `${f}`, x + 3, height - 5);
+    });
+
+    ctx.strokeStyle = '#22c55e';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    let peakIndex = 0;
+    let peakVal = -1;
+    let started = false;
+    for (let i = 1; i < data.length; i++) {
+      const freq = i * state.audioCtx.sampleRate / state.analyser.fftSize;
+      if (freq < minHz) continue;
+      if (data[i] > peakVal) {
+        peakVal = data[i];
+        peakIndex = i;
+      }
+      const mag = Math.max(1e-4, data[i] / 255);
+      const db = clamp(20 * Math.log10(mag), dbMin, dbMax);
+      const x = freqToX(freq);
+      const y = dbToY(db);
+      if (!started) {
+        ctx.moveTo(x, y);
+        started = true;
+      } else {
+        ctx.lineTo(x, y);
+      }
+    }
+    ctx.stroke();
+
+    const peakFreq = peakIndex * state.audioCtx.sampleRate / state.analyser.fftSize;
+    ui.peakFreqText.textContent = `${peakFreq.toFixed(1)} Hz`;
+  }
+
+  function colorMap(v) {
+    const x = clamp(v, 0, 1);
+    const r = Math.floor(255 * Math.pow(x, 1.2));
+    const g = Math.floor(255 * Math.pow(x, 0.7));
+    const b = Math.floor(255 * (1 - x) * (1 - x * 0.3));
+    return [r, g, b];
+  }
+
+  function drawSpectrogram() {
+    const canvas = ui.spectrogramCanvas;
+    const ctx = state.specCtx;
+    const w = canvas.width;
+    const h = canvas.height;
+
+    const old = ctx.getImageData(1, 0, w - 1, h);
+    ctx.putImageData(old, 0, 0);
+
+    for (let y = 0; y < h; y++) {
+      const bin = Math.floor((1 - y / (h - 1)) * (state.freqData.length - 1));
+      const v = state.freqData[bin] / 255;
+      const [r, g, b] = colorMap(v);
+      ctx.fillStyle = `rgb(${r},${g},${b})`;
+      ctx.fillRect(w - 1, y, 1, 1);
+    }
+  }
+
+  function windowValue(n, N, mode) {
+    if (mode === 'rect') return 1;
+    if (mode === 'hamming') return 0.54 - 0.46 * Math.cos(2 * Math.PI * n / Math.max(1, N - 1));
+    if (mode === 'blackman') return 0.42 - 0.5 * Math.cos(2 * Math.PI * n / Math.max(1, N - 1)) + 0.08 * Math.cos(4 * Math.PI * n / Math.max(1, N - 1));
+    return 0.5 - 0.5 * Math.cos(2 * Math.PI * n / Math.max(1, N - 1));
+  }
+
+  function drawADSRGraph() {
+    const canvas = ui.adsrCanvas;
+    const ctx = canvas.getContext('2d');
+    const { width, height } = canvas;
+    ctx.clearRect(0, 0, width, height);
+    ctx.fillStyle = '#020617';
+    ctx.fillRect(0, 0, width, height);
+    const opts = getCurrentRenderOptions();
+    const adsr = opts.adsr;
+    const hold = 0.45;
+    const total = adsr.a + adsr.d + hold + adsr.r;
+    ctx.strokeStyle = '#334155';
+    for (let i = 0; i <= 4; i++) {
+      const y = i * (height - 24) / 4 + 12;
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(width, y); ctx.stroke();
+    }
+    ctx.strokeStyle = '#22c55e';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    for (let x = 0; x < width; x++) {
+      const t = total * x / Math.max(1, width - 1);
+      const e = envAt(t, adsr.a + adsr.d + hold, adsr);
+      const y = height - 12 - e * (height - 24);
+      if (x === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '12px sans-serif';
+    ctx.fillText(`A=${(adsr.a*1000).toFixed(0)}ms D=${(adsr.d*1000).toFixed(0)}ms S=${adsr.s.toFixed(2)} R=${(adsr.r*1000).toFixed(0)}ms`, 10, 18);
+  }
+
+  function drawFilterGraph() {
+    const canvas = ui.filterEnvCanvas;
+    const ctx = canvas.getContext('2d');
+    const { width, height } = canvas;
+    ctx.clearRect(0, 0, width, height);
+    ctx.fillStyle = '#020617';
+    ctx.fillRect(0, 0, width, height);
+    const opts = getCurrentRenderOptions();
+    const total = 0.9;
+    const maxCut = Math.max(opts.lowpassCutoff * (1 + opts.filterEnvAmount), opts.lowpassCutoff) * 1.1;
+    ctx.strokeStyle = '#334155';
+    for (let i = 0; i <= 4; i++) {
+      const y = i * (height - 24) / 4 + 12;
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(width, y); ctx.stroke();
+    }
+    ctx.strokeStyle = '#38bdf8';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    for (let x = 0; x < width; x++) {
+      const t = total * x / Math.max(1, width - 1);
+      const env = Math.exp(-t / Math.max(0.005, opts.filterEnvDecay || 0.12));
+      const c = opts.lowpassCutoff * (1 + opts.filterEnvAmount * env);
+      const y = height - 12 - (Math.log10(c + 1) / Math.log10(maxCut + 1)) * (height - 24);
+      if (x === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '12px sans-serif';
+    ctx.fillText(`cutoff=${opts.lowpassCutoff}Hz  envAmt=${opts.filterEnvAmount.toFixed(2)}  decay=${(opts.filterEnvDecay*1000).toFixed(0)}ms  Q=${opts.resonanceQ.toFixed(2)}`, 10, 18);
+  }
+
+  function getSelectedWindowMode() {
+    const previewMode = ui.windowPreviewSelect ? ui.windowPreviewSelect.value : '';
+    const analysisMode = ui.windowFunctionSelect ? ui.windowFunctionSelect.value : '';
+    return previewMode || analysisMode || 'hann';
+  }
+
+  function syncWindowSelectors(source = 'preview') {
+    const mode = getSelectedWindowMode();
+    if (source !== 'preview' && ui.windowPreviewSelect && ui.windowPreviewSelect.value !== mode) {
+      ui.windowPreviewSelect.value = mode;
+    }
+    if (source !== 'analysis' && ui.windowFunctionSelect && ui.windowFunctionSelect.value !== mode) {
+      ui.windowFunctionSelect.value = mode;
+    }
+    return mode;
+  }
+
+  function drawWindowGraph() {
+    const canvas = ui.windowCanvas;
+    const ctx = canvas.getContext('2d');
+    const { width, height } = canvas;
+    ctx.clearRect(0, 0, width, height);
+    ctx.fillStyle = '#020617';
+    ctx.fillRect(0, 0, width, height);
+    const mode = syncWindowSelectors();
+    const N = 256;
+    ctx.strokeStyle = '#334155';
+    ctx.beginPath(); ctx.moveTo(0, height - 12); ctx.lineTo(width, height - 12); ctx.stroke();
+    ctx.strokeStyle = '#f59e0b';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    for (let i = 0; i < N; i++) {
+      const x = i / (N - 1) * width;
+      const y = height - 12 - windowValue(i, N, mode) * (height - 24);
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '12px sans-serif';
+    ctx.fillText(`window = ${mode}`, 10, 18);
+  }
+
+  function drawPhaseScope() {
+    const canvas = ui.phaseScopeCanvas;
+    const ctx = canvas.getContext('2d');
+    const { width, height } = canvas;
+    ctx.clearRect(0, 0, width, height);
+    ctx.fillStyle = '#020617';
+    ctx.fillRect(0, 0, width, height);
+    ctx.strokeStyle = '#334155';
+    ctx.beginPath();
+    ctx.moveTo(width / 2, 0); ctx.lineTo(width / 2, height);
+    ctx.moveTo(0, height / 2); ctx.lineTo(width, height / 2);
+    ctx.stroke();
+    if (!state.renderedPCM || !state.renderedPCM.leftPCM || !state.renderedPCM.rightPCM) return;
+    const sr = state.renderedPCM.sampleRate;
+    const center = Math.floor(currentPlaybackTime() * sr);
+    const span = Math.min(2000, state.renderedPCM.leftPCM.length);
+    const start = clamp(center - span, 0, Math.max(0, state.renderedPCM.leftPCM.length - span));
+    const mode = ui.phaseModeSelect.value;
+    let sumLR = 0, sumLL = 0, sumRR = 0;
+    ctx.strokeStyle = '#8b5cf6';
+    ctx.beginPath();
+    let started = false;
+    for (let i = 0; i < span; i += 2) {
+      const idx = start + i;
+      const l = state.renderedPCM.leftPCM[idx] || 0;
+      const r = state.renderedPCM.rightPCM[idx] || 0;
+      sumLR += l * r; sumLL += l * l; sumRR += r * r;
+      let xVal, yVal;
+      if (mode === 'ms') {
+        xVal = 0.5 * (l + r);
+        yVal = 0.5 * (l - r);
+      } else {
+        xVal = l; yVal = r;
+      }
+      const x = width * (0.5 + 0.42 * clamp(xVal, -1, 1));
+      const y = height * (0.5 - 0.42 * clamp(yVal, -1, 1));
+      if (!started) { ctx.moveTo(x, y); started = true; } else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+    const corr = sumLL > 0 && sumRR > 0 ? sumLR / Math.sqrt(sumLL * sumRR) : 0;
+    state.phaseCorrelation = corr;
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '12px sans-serif';
+    ctx.fillText(`phase corr = ${corr.toFixed(3)}   mode = ${mode}`, 10, 18);
+  }
+
+  function biquadRootsFromCoeffs(c, mode = 'poles') {
+    let A = 1, B = 0, C = 0;
+    if (mode === 'zeros') {
+      const s = Math.abs(c.b0) < 1e-9 ? 1e-9 : c.b0;
+      A = 1;
+      B = c.b1 / s;
+      C = c.b2 / s;
+    } else {
+      A = 1;
+      B = c.a1;
+      C = c.a2;
+    }
+    const disc = B * B - 4 * A * C;
+    if (disc >= 0) {
+      const r = Math.sqrt(disc);
+      return [
+        { re: (-B + r) / (2 * A), im: 0 },
+        { re: (-B - r) / (2 * A), im: 0 }
+      ];
+    }
+    const r = Math.sqrt(-disc);
+    return [
+      { re: -B / (2 * A), im: r / (2 * A) },
+      { re: -B / (2 * A), im: -r / (2 * A) }
+    ];
+  }
+
+  function evalBiquadMagnitude(c, omega) {
+    const z1re = Math.cos(omega), z1im = -Math.sin(omega);
+    const z2re = Math.cos(2 * omega), z2im = -Math.sin(2 * omega);
+    const numRe = c.b0 + c.b1 * z1re + c.b2 * z2re;
+    const numIm = c.b1 * z1im + c.b2 * z2im;
+    const denRe = 1 + c.a1 * z1re + c.a2 * z2re;
+    const denIm = c.a1 * z1im + c.a2 * z2im;
+    const num = Math.sqrt(numRe * numRe + numIm * numIm);
+    const den = Math.sqrt(denRe * denRe + denIm * denIm);
+    return num / Math.max(1e-9, den);
+  }
+
+  function drawZPlaneGraph() {
+    const canvas = ui.zPlaneCanvas;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const { width, height } = canvas;
+    ctx.clearRect(0, 0, width, height);
+    ctx.fillStyle = '#020617';
+    ctx.fillRect(0, 0, width, height);
+    const opts = getCurrentRenderOptions();
+    const sampleRate = opts.sampleRate * Math.max(1, opts.oversample || 1);
+    const lp = rbjLowpassCoeffs(sampleRate, opts.lowpassCutoff, opts.resonanceQ);
+    const eq = rbjPeakingCoeffs(sampleRate, opts.eqFreq, opts.eqQ, opts.eqGainDb);
+    const cx = width / 2, cy = height / 2;
+    const rad = Math.min(width, height) * 0.34;
+    ctx.strokeStyle = '#334155';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.arc(cx, cy, rad, 0, 2 * Math.PI); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx - rad * 1.2, cy); ctx.lineTo(cx + rad * 1.2, cy); ctx.moveTo(cx, cy - rad * 1.2); ctx.lineTo(cx, cy + rad * 1.2); ctx.stroke();
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '12px sans-serif';
+    ctx.fillText('unit circle', cx + rad + 8, cy - 6);
+    const drawSet = (roots, color, isZero, labelY) => {
+      ctx.strokeStyle = color;
+      ctx.fillStyle = color;
+      roots.forEach((r) => {
+        const x = cx + r.re * rad;
+        const y = cy - r.im * rad;
+        if (isZero) {
+          ctx.beginPath(); ctx.arc(x, y, 8, 0, 2 * Math.PI); ctx.stroke();
+        } else {
+          ctx.beginPath(); ctx.moveTo(x - 7, y - 7); ctx.lineTo(x + 7, y + 7); ctx.moveTo(x - 7, y + 7); ctx.lineTo(x + 7, y - 7); ctx.stroke();
+        }
+      });
+      ctx.fillStyle = color;
+      ctx.fillText(labelY, 12, 18 + drawSet.row * 16);
+      drawSet.row += 1;
+    };
+    drawSet.row = 0;
+    drawSet(biquadRootsFromCoeffs(lp, 'zeros'), '#38bdf8', true, 'LP zeros');
+    drawSet(biquadRootsFromCoeffs(lp, 'poles'), '#22c55e', false, 'LP poles');
+    drawSet(biquadRootsFromCoeffs(eq, 'zeros'), '#f59e0b', true, 'EQ zeros');
+    drawSet(biquadRootsFromCoeffs(eq, 'poles'), '#ef4444', false, 'EQ poles');
+    const lpPoles = biquadRootsFromCoeffs(lp, 'poles');
+    const radius = Math.max(...lpPoles.map((p) => Math.hypot(p.re, p.im)));
+    ctx.fillStyle = '#cbd5e1';
+    ctx.fillText(`LP pole radius = ${radius.toFixed(4)}   Q = ${opts.resonanceQ.toFixed(2)}   radius→1 で共振が鋭くなる`, 12, height - 12);
+  }
+
+  function drawBodePlotGraph() {
+    const canvas = ui.bodeCanvas;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const { width, height } = canvas;
+    ctx.clearRect(0, 0, width, height);
+    ctx.fillStyle = '#020617';
+    ctx.fillRect(0, 0, width, height);
+    const opts = getCurrentRenderOptions();
+    const sampleRate = opts.sampleRate * Math.max(1, opts.oversample || 1);
+    const fMin = 20;
+    const fMax = Math.min(sampleRate * 0.48, 20000);
+    const lp = rbjLowpassCoeffs(sampleRate, opts.lowpassCutoff, opts.resonanceQ);
+    const eq = rbjPeakingCoeffs(sampleRate, opts.eqFreq, opts.eqQ, opts.eqGainDb);
+    const yFromDb = (db) => 12 + (height - 24) * (1 - (db + 36) / 48);
+    ctx.strokeStyle = '#334155';
+    ctx.lineWidth = 1;
+    for (const db of [-36, -24, -12, 0, 12]) {
+      const y = yFromDb(db);
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(width, y); ctx.stroke();
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '11px sans-serif';
+      ctx.fillText(`${db} dB`, 8, y - 3);
+    }
+    const drawResp = (coeff, color, extraCoeff = null) => {
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      for (let x = 0; x < width; x++) {
+        const frac = x / Math.max(1, width - 1);
+        const f = fMin * Math.pow(fMax / fMin, frac);
+        const w = 2 * Math.PI * f / sampleRate;
+        let mag = evalBiquadMagnitude(coeff, w);
+        if (extraCoeff) mag *= evalBiquadMagnitude(extraCoeff, w);
+        const db = 20 * Math.log10(Math.max(1e-6, mag));
+        const y = clamp(yFromDb(db), 12, height - 12);
+        if (x === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    };
+    drawResp(lp, '#38bdf8');
+    drawResp(eq, '#f59e0b');
+    drawResp(lp, '#22c55e', eq);
+    ctx.fillStyle = '#38bdf8'; ctx.fillText('LP', 12, 18);
+    ctx.fillStyle = '#f59e0b'; ctx.fillText('EQ', 44, 18);
+    ctx.fillStyle = '#22c55e'; ctx.fillText('LP×EQ', 78, 18);
+    ctx.fillStyle = '#cbd5e1';
+    ctx.fillText(`low-pass cutoff=${opts.lowpassCutoff} Hz  Q=${opts.resonanceQ.toFixed(2)}   EQ f0=${opts.eqFreq.toFixed(0)} Hz  G=${opts.eqGainDb.toFixed(1)} dB  Q=${opts.eqQ.toFixed(2)}`, 12, height - 12);
+  }
+
+  function drawImpulseResponseGraph() {
+    const canvas = ui.irCanvas;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const { width, height } = canvas;
+    ctx.clearRect(0, 0, width, height);
+    ctx.fillStyle = '#020617';
+    ctx.fillRect(0, 0, width, height);
+    const opts = getCurrentRenderOptions();
+    const ir = state.currentIrPreview || buildSparseConvolutionIR(opts.sampleRate * Math.max(1, opts.oversample || 1), opts);
+    ctx.strokeStyle = '#334155';
+    ctx.beginPath(); ctx.moveTo(0, height / 2); ctx.lineTo(width, height / 2); ctx.stroke();
+    const step = Math.max(1, Math.floor(ir.left.length / width));
+    ctx.strokeStyle = '#a78bfa';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (let x = 0; x < width; x++) {
+      const start = x * step;
+      const end = Math.min(ir.left.length, start + step);
+      let minV = 1, maxV = -1;
+      for (let i = start; i < end; i++) {
+        const v = 0.5 * ((ir.left[i] || 0) + (ir.right[i] || 0));
+        if (v < minV) minV = v;
+        if (v > maxV) maxV = v;
+      }
+      const y1 = (1 - maxV) * 0.5 * height;
+      const y2 = (1 - minV) * 0.5 * height;
+      ctx.moveTo(x, y1); ctx.lineTo(x, y2);
+    }
+    ctx.stroke();
+    ctx.fillStyle = '#cbd5e1';
+    ctx.font = '12px sans-serif';
+    ctx.fillText(`y[n] = Σ_k x[n-k] h[k]   mix=${opts.convMix.toFixed(2)}   length=${opts.convLengthMs.toFixed(0)} ms   pre-delay=${opts.convPredelayMs.toFixed(0)} ms   damping=${opts.convDamping.toFixed(2)}`, 12, 18);
+  }
+
+  function updateDrumFormula() {
+    ui.drumFormulaBox.textContent = `Kick
+f(t) = f_1 e^{-a t} + f_2
+x(t) = e^{-b t} sin(2π f(t) t)
+
+Snare
+x(t) = α noise(t) e^{-a t} + β sin(2π f_b t) e^{-b t}
+
+Hi-hat / Cymbal / Ride
+x(t) = HP{noise(t)} e^{-a t}
+
+Clap
+x(t) = gate(t) HP{noise(t)} e^{-a t}
+短い反復バーストで手拍子感を近似
+
+Rim
+x(t) = 0.75 sin(2π f_r t)e^{-a t} + 0.5 noise(t)e^{-b t}`;
+  }
+
+  function drawControlGraphs() {
+    drawADSRGraph();
+    drawFilterGraph();
+    drawWindowGraph();
+    drawPhaseScope();
+    drawZPlaneGraph();
+    drawBodePlotGraph();
+    drawImpulseResponseGraph();
+    updateDrumFormula();
+  }
+
+  function clearLiveVisuals() {
+    const ids = [ui.liveWaveCanvas, ui.lissajousCanvas, ui.linearFftCanvas, ui.fftCanvas, ui.spectrogramCanvas, ui.phaseScopeCanvas];
+    for (const canvas of ids) {
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#020617';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+    ui.peakFreqText.textContent = '-';
+    ui.playTimeText.textContent = '0:00.0 / 0:00.0';
+    drawPianoRoll(0);
+    syncKeyboardHighlights(0);
+  }
+
+  function updateVisualizerLoop() {
+    if (!state.analyser || !state.renderedAudioBuffer) return;
+    state.analyser.getByteTimeDomainData(state.timeData);
+    state.analyser.getByteFrequencyData(state.freqData);
+    drawCurrentWaveform();
+    drawLissajous();
+    drawLinearFFT();
+    drawFFT();
+    drawSpectrogram();
+    drawPhaseScope();
+
+    const current = currentPlaybackTime();
+    drawPianoRoll(current);
+    syncKeyboardHighlights(current);
+    const dur = state.renderedAudioBuffer.duration;
+    ui.seekSlider.value = String(Math.floor((current / dur) * 1000));
+    ui.playTimeText.textContent = `${secText(current)} / ${secText(dur)}`;
+
+    if (state.isPlaying) {
+      state.rafId = requestAnimationFrame(updateVisualizerLoop);
+    }
+  }
+
+  function playRendered() {
+    if (!state.renderedAudioBuffer) return;
+    ensureAudio();
+    state.audioCtx.resume();
+    stopPlayback(false);
+
+    state.source = state.audioCtx.createBufferSource();
+    state.source.buffer = state.renderedAudioBuffer;
+    state.gainNode.gain.value = parseFloat(ui.volumeSlider.value);
+    state.source.connect(state.analyser);
+
+    state.playStartedAt = state.audioCtx.currentTime - state.pauseOffset;
+    state.source.start(0, state.pauseOffset);
+    state.isPlaying = true;
+    ui.playBtn.disabled = true;
+    ui.pauseBtn.disabled = false;
+    ui.stopBtn.disabled = false;
+    setStatus('再生中');
+    updateVisualizerLoop();
+
+    state.source.onended = () => {
+      const current = currentPlaybackTime();
+      if (state.isPlaying && current >= state.renderedAudioBuffer.duration - 0.05) {
+        stopPlayback(true);
+        setStatus('再生完了');
+      }
+    };
+  }
+
+  function pauseRendered() {
+    if (!state.isPlaying) return;
+    state.pauseOffset = currentPlaybackTime();
+    stopPlayback(false);
+    ui.playBtn.disabled = false;
+    setStatus('一時停止');
+  }
+
+  function updateFormula() {
+    const def = getInstrumentDefinition(ui.instrumentSelect.value, parseFloat(ui.dutySelect.value));
+    const opts = getCurrentRenderOptions();
+    const instExtra = opts.instrument === 'karplus'
+      ? `
+Karplus-Strong
+x[n] = short noise
+y[n] = 0.5 (x[n-D] + x[n-(D+1)])
+D ≈ f_s / f_0
+`
+      : opts.instrument === 'fm'
+      ? `
+FM synthesis
+x(t) = A sin(2π f_c t + I sin(2π f_m t))
+f_m = r f_c,  r = ${opts.fmRatio.toFixed(2)},  I = ${opts.fmIndex.toFixed(2)}
+`
+      : opts.instrument === 'wavetable'
+      ? `
+Wavetable synthesis
+x(t) = table[ frac(ft) ]
+mode = ${opts.wavetable}
+`
+      : opts.instrument === 'noise'
+      ? `
+Noise source
+x[n] = noise[n]
+y[n] = H(z) x[n]
+`
+      : '';
+    const formulaText = `${def.formula}
+
+${def.memo}
+${instExtra}
+1. MIDI番号と周波数の対応
+f(n) = 440 × 2^((n-69)/12)
+
+意味
+- n = 69 のとき A4 = 440 Hz
+- 半音上がるごとに周波数は 2^(1/12) 倍
+- ピアノロール上の高さが、実際には周波数比になっていることを表します
+
+2. 音の基本構成
+x_note(t) = E(t) s(t)
+
+意味
+- s(t): 発振器や合成器が作る生の波形
+- E(t): ADSR などの時間包絡
+- 実際の音は「波形」だけではなく、「時間変化」と掛け合わせて決まります
+
+3. マルチチャンネル / マルチ音色
+x_total[n] = Σ_c Σ_i x_{c,i}[n]
+
+意味
+- c は MIDI channel
+- i は同じチャンネル内で同時に鳴っているノート
+- 1つの曲は、メロディ、ベース、伴奏、ドラムなどの和として作られます
+
+4. ADSR 包絡
+E(t) =
+  t/A                                  (0 ≤ t < A)
+  1 - (1-S)(t-A)/D                     (A ≤ t < A+D)
+  S                                    (key on の保持中)
+  S exp(-(t-t_off)/R)                  (key off 後)
+
+現在値
+A = ${opts.adsr.a.toFixed(3)} s
+D = ${opts.adsr.d.toFixed(3)} s
+S = ${opts.adsr.s.toFixed(2)}
+R = ${opts.adsr.r.toFixed(3)} s
+
+読み方
+- A が短いほど立ち上がりが鋭い
+- D が短いほどすぐに落ち着く
+- S が大きいほど押している間の音量が保たれる
+- R が長いほど余韻が長い
+
+5. フィルタ包絡
+f_c(t) = f_base [1 + k_f exp(-t/τ_f)]
+
+現在値
+k_f = ${opts.filterEnvAmount.toFixed(2)}
+τ_f = ${(opts.filterEnvDecay*1000).toFixed(0)} ms
+
+読み方
+- 発音直後だけ cutoff を高くし、時間とともに下げる形
+- これにより「最初は明るい、あとで丸くなる」音が作れます
+
+6. Velocity to Filter
+f_c(v) = f_base × (0.55 + v_norm (0.45 + 2.2 k_v))
+v_norm = velocity / 127
+k_v = ${opts.velToCutoff.toFixed(2)}
+
+読み方
+- 打鍵が強いほど cutoff が上がる
+- 単なる音量差ではなく、明るさの差も出せます
+- ピアノやギターらしい表情につながります
+
+7. LFO / モジュレーション
+m(t) = ${opts.modWaveform}(2π f_LFO t)
+
+現在値
+f_LFO = ${opts.modRate.toFixed(1)} Hz
+depth = ${opts.modDepth.toFixed(2)}
+target = ${opts.modTarget}
+
+target別の例
+pitch: f(t) = f_0 [1 + 0.08 depth m(t)]
+amp:   g(t) = 1 + 0.70 depth m(t)
+filter:f_c(t) = f_c [0.75 + 1.6 depth (0.5 + 0.5 m(t))]
+
+読み方
+- pitch を揺らすと vibrato
+- amp を揺らすと tremolo
+- filter を揺らすと wah / wobble 的な変化
+
+8. PolyBLEP anti-aliasing
+不連続波形の段差点を BLEP(t, dt) で補正
+
+読み方
+- square / pulse / saw は本来不連続で、高域倍音を大量に含みます
+- 離散時間ではその高域が折り返してノイズになります
+- PolyBLEP は段差の周囲だけを滑らかにし、音色を大きく変えずに折り返し雑音を抑えます
+
+9. Resonant low-pass / biquad
+H(z) = (b0 + b1 z^-1 + b2 z^-2) / (1 + a1 z^-1 + a2 z^-2)
+
+現在値
+Q = ${opts.resonanceQ.toFixed(2)}
+
+読み方
+- 分子は zeros、分母は poles を決めます
+- Q を上げると cutoff 付近の山が高くなります
+- 極が単位円に近づくと共振が鋭くなります
+
+10. Pseudo reverb / delay
+z[n] = x[n] + g x[n-D] + g^2 x[n-2D] + ...
+
+現在値
+D = ${opts.delayMs} ms
+mix = ${opts.spaceMix.toFixed(2)}
+feedback = ${opts.feedback.toFixed(2)}
+density = ${opts.density}
+
+読み方
+- 同じ音を遅らせて何度も重ねることで空間感を作ります
+- feedback が大きいほど長く残ります
+- density は残響の密度感に対応します
+
+11. Convolution reverb
+y[n] = Σ_k x[n-k] h[k]
+
+現在値
+mix = ${opts.convMix.toFixed(2)}
+IR length = ${opts.convLengthMs.toFixed(0)} ms
+pre-delay = ${opts.convPredelayMs.toFixed(0)} ms
+damping = ${opts.convDamping.toFixed(2)}
+
+読み方
+- h[k] は空間のインパルス応答です
+- 畳み込みは「その空間に音を入れたらどう返ってくるか」を計算しています
+- delayベースより物理的な空間再現に近い考え方です
+
+12. Chorus
+y(t) = (1-m)x(t) + m x(t-τ(t))
+τ(t) = τ_0 + Δτ sin(2π f_c t)
+
+現在値
+m = ${opts.chorusMix.toFixed(2)}
+Δτ = ${opts.chorusDepthMs.toFixed(1)} ms
+rate = ${opts.chorusRate.toFixed(1)} Hz
+
+読み方
+- 少し遅れたコピーを時間変動させて混ぜます
+- 同じ音がわずかにズレて鳴るため、厚みや広がりが出ます
+
+13. Drive
+y = tanh(Gx) / tanh(G)
+
+現在値
+G = 1 + 18 drive
+drive = ${opts.drive.toFixed(2)}
+
+読み方
+- 大振幅ほど押しつぶす非線形処理です
+- 奇数次・偶数次の倍音が増え、音が前に出やすくなります
+
+14. Compressor
+if L_dB > T_dB:
+  L_out = T_dB + (L_dB - T_dB) / R
+
+現在値
+T = ${opts.compressorThresholdDb.toFixed(1)} dB
+R = ${opts.compressorRatio.toFixed(1)}:1
+makeup = ${opts.compressorMakeupDb.toFixed(1)} dB
+
+読み方
+- しきい値を超えた大きい音だけを圧縮します
+- その後で makeup gain を足し、全体を聞きやすく整えます
+- ピークを抑えつつ平均音量を上げる考え方です
+
+15. Parametric EQ / peaking biquad
+A = 10^(G/40)
+ω0 = 2π f0 / f_s
+α = sin(ω0)/(2Q)
+
+現在値
+f0 = ${opts.eqFreq.toFixed(0)} Hz
+G = ${opts.eqGainDb.toFixed(1)} dB
+Q = ${opts.eqQ.toFixed(2)}
+
+読み方
+- f0 は中心周波数
+- G は持ち上げ量 / 下げ量
+- Q は帯域幅の鋭さ
+- キックとベースがぶつかる帯域だけを整理する、という使い方ができます
+
+16. z平面 / poles and zeros
+B(z) = b0 z^2 + b1 z + b2
+A(z) = z^2 + a1 z + a2
+zeros: B(z)=0
+poles: A(z)=0
+
+読み方
+- zeros はその周波数帯を打ち消す方向
+- poles はその周波数帯を強める方向
+- 極が単位円に近づくほど共振が強く、外へ出ると不安定になります
+
+17. Oversampling
+f_internal = ${opts.oversample} × f_s
+
+読み方
+- 先に高い内部サンプルレートで合成し、あとで戻します
+- 非線形処理や鋭い波形で出やすい折り返し雑音を減らす考え方です
+
+18. Drum model
+kick / snare / hat / tom / clap / cymbal / rim / ride
+= 減衰振動 + ノイズ + 共振の組合せ
+
+読み方
+- キックは低い共振と周波数降下
+- スネアは胴鳴り + ノイズ
+- ハイハットやシンバルは高域ノイズ中心
+- つまりドラムも「単なる1波形」ではなく、複数成分の和で近似できます`;
+    const analysisText = `1. DFT
+X[k] = Σ_{n=0}^{N-1} x[n] e^(-j2πkn/N)
+
+意味
+- 時間波形 x[n] を、周波数ごとの複素成分 X[k] に分解します
+- |X[k]| はその周波数の強さ
+- arg X[k] はその周波数の位相です
+
+2. FFT
+FFT は DFT を速く計算するアルゴリズムです
+N 点をそのまま計算すると重いので、対称性を使って計算量を減らします
+
+3. STFT
+X(m,k) = Σ x[n] w[n-m] e^(-j2πkn/N)
+
+意味
+- 1回だけFFTするのではなく、短い窓 w[n] を少しずつずらしながらFFTします
+- m は時間位置、k は周波数番号です
+- そのため「いつ、どの周波数が強かったか」を見られます
+
+4. 窓関数
+window = ${opts.windowFunction}
+
+rect:
+w[n] = 1
+
+hann:
+w[n] = 0.5 - 0.5 cos(2πn/(N-1))
+
+hamming:
+w[n] = 0.54 - 0.46 cos(2πn/(N-1))
+
+blackman:
+w[n] = 0.42 - 0.5 cos(2πn/(N-1)) + 0.08 cos(4πn/(N-1))
+
+読み方
+- 窓関数は切り出した波形の端をどう扱うかを決めます
+- 端を急に切るとスペクトル漏れが増えます
+- Hann や Blackman は漏れを減らす代わりに、ピークが少し広がります
+
+5. 線形振幅表示
+M(f) = |X(f)| / max |X(f)|
+
+意味
+- 最も大きい成分を1として正規化し、相対的な強さを見る表示です
+- どの倍音が何番目に強いかを見やすいです
+
+6. dB 表示
+|X(f)|_dB = 20 log10 |X(f)|
+
+意味
+- 人の聴感に近い圧縮スケールで強さを表します
+- 小さい成分も見やすくなり、帯域バランスを比較しやすいです
+
+7. 理論的フィルタ周波数応答
+H(e^{jω}) = (b0 + b1 e^{-jω} + b2 e^{-j2ω}) / (1 + a1 e^{-jω} + a2 e^{-j2ω})
+
+意味
+- これは「そのフィルタ自体」が周波数ごとに何倍するかを表します
+- まだ音を通していなくても、設定だけで理論応答を描けます
+- low-pass と EQ の応答を別々に見て、さらに合成応答も確認できます
+
+8. Bode Plot
+Magnitude(ω) = 20 log10 |H(e^{jω})|
+
+意味
+- 横軸を周波数、縦軸を dB にしたフィルタ特性です
+- cutoff、Q、EQ gain を変えたときの帯域の山や減衰を理論的に見られます
+
+9. z平面との関係
+H(z) = B(z) / A(z)
+
+意味
+- A(z) の根が poles、B(z) の根が zeros です
+- 単位円上の角度が周波数に対応します
+- pole が単位円に近いと、その近くの周波数で応答が大きくなります
+
+10. スペクトログラムの読み方
+横軸 = 時間
+縦軸 = 周波数
+色   = 成分の強さ
+
+意味
+- アタックの瞬間は縦に明るく出やすい
+- 持続音は横に帯のように出やすい
+- ドラムは短く広帯域、ベースは低域集中、倍音の多い音は縞が増えます
+
+11. ステレオ位相解析
+ρ = Σ L[n]R[n] / √(Σ L[n]^2 Σ R[n]^2)
+mode = ${opts.phaseMode}
+
+意味
+- ρ ≈ 1 なら左右がほぼ同じ
+- ρ ≈ 0 なら左右の相関が低い
+- ρ < 0 なら左右が逆相気味
+- chorus や reverb を深くすると相関が下がりやすいです
+
+12. PCM と WAV
+PCM:
+x[n] ∈ [-1, 1]
+
+int16:
+s[n] = round(32767 x[n])
+
+WAV:
+RIFF header + fmt chunk + data chunk
+
+意味
+- 内部では浮動小数のPCMを扱い
+- 保存時に int16 に量子化して WAV にします
+- このページでは、すでに計算済みのPCMをそのままWAV化します
+
+13. 畳み込みリバーブ
+y[n] = Σ_{k=0}^{M} x[n-k] h[k]
+
+意味
+- x[n] が入力音
+- h[k] が空間のインパルス応答
+- 出力 y[n] は「その空間を通した結果」です
+- IR が長いほど残響は長く、damping を強くすると高域が早く減衰します
+
+14. 解析のおすすめ順
+(1) 波形を見る
+(2) FFT で倍音を見る
+(3) STFT で時間変化を見る
+(4) 必要なら Bode Plot で理論特性を見る
+(5) さらに z平面で極・零点との対応を見る
+
+この順だと、耳で聞こえる変化と数式上の変化を対応づけやすいです`;
+    ui.formulaBox.textContent = `${formulaText}
+
+19. 解析と周波数領域の詳しい解説
+${analysisText}
+
+20. この欄の読み方
+- 前半は「音をどう作るか」の式です。発振器、包絡、フィルタ、空間系、非線形処理、ドラム近似をまとめています。
+- 後半は「作った音をどう見るか」の式です。DFT、FFT、STFT、窓関数、Bode Plot、z平面、PCM、WAV化をまとめています。
+- 音作りで変えたパラメータが、どの式のどこに入っているかを追うと理解しやすいです。
+- 基本は
+  周波数 → 波形 s(t) → 包絡 E(t) → フィルタ H(z) → エフェクト → FFT
+  の順で読むと流れがつながります。`;
+    drawControlGraphs();
+  }
+
+  async function handleRenderFromMidiArrayBuffer(buffer, fileNameText) {
+    if (state.rendering) return;
+    try {
+      state.rendering = true;
+      ui.renderBtn.disabled = true;
+      ui.playBtn.disabled = true;
+      ui.pauseBtn.disabled = true;
+      ui.stopBtn.disabled = true;
+      ui.seekSlider.disabled = true;
+      ui.progressText.textContent = '0%';
+      setStatus('MIDI解析中');
+      clearLiveVisuals();
+      state.currentIrPreview = null;
+
+      const midiData = parseMidi(buffer.slice(0));
+      state.midiData = midiData;
+      rebuildChannelInstrumentPanel(midiData);
+      setVisualNotes(midiData.notes);
+      ui.fileName.textContent = fileNameText || ui.fileName.textContent;
+      ui.noteCount.textContent = String(midiData.notes.length);
+      ui.durationText.textContent = secText(midiData.durationSec);
+      ui.tempoText.textContent = `${midiData.bpm.toFixed(1)} BPM`;
+
+      if (!midiData.notes.length) throw new Error('ノートが見つかりません。ドラムのみのMIDIかもしれません');
+
+      setStatus('レンダリング中');
+      const rendered = await renderNotesToPCM(midiData.notes, getCurrentRenderOptions());
+
+      state.renderedPCM = rendered;
+      state.currentIrPreview = rendered.irPreview || null;
+      state.dryPCM = rendered.dryPCM;
+      state.processedLeft = rendered.leftPCM;
+      state.processedRight = rendered.rightPCM;
+      state.renderedAudioBuffer = pcmToAudioBuffer(rendered);
+      state.pauseOffset = 0;
+      ui.seekSlider.disabled = false;
+      ui.playBtn.disabled = false;
+      ui.downloadWavBtn.disabled = false;
+      ui.stopBtn.disabled = false;
+      drawOverviewWaveform(rendered.dryPCM);
+      drawCurrentWaveform();
+      drawLissajous();
+      initSpectrogram();
+      drawControlGraphs();
+      ui.playTimeText.textContent = `0:00.0 / ${secText(rendered.durationSec)}`;
+      setStatus('レンダリング完了。再生できます');
+    } catch (err) {
+      console.error(err);
+      setStatus(`エラー: ${err.message}`);
+    } finally {
+      state.rendering = false;
+      ui.renderBtn.disabled = false;
+    }
+  }
+
+  async function handleRender() {
+    if (!state.midiArrayBuffer) {
+      setStatus('先にMIDIファイルを選んでください');
+      return;
+    }
+    await handleRenderFromMidiArrayBuffer(state.midiArrayBuffer, ui.fileName.textContent);
+  }
+
+  async function handleTestTone() {
+    if (state.rendering) return;
+    try {
+      setStatus('テスト音をレンダリング中');
+      clearLiveVisuals();
+      const notes = [
+        { midi: 69, startSec: 0.00, endSec: 0.90, velocity: 110 },
+        { midi: 72, startSec: 1.00, endSec: 1.90, velocity: 100 },
+        { midi: 76, startSec: 2.00, endSec: 2.90, velocity: 100 }
+      ];
+      setVisualNotes(notes);
+      ui.fileName.textContent = 'internal_test_tone';
+      ui.noteCount.textContent = String(notes.length);
+      ui.durationText.textContent = '0:03.0';
+      ui.tempoText.textContent = '-';
+      ui.progressText.textContent = '0%';
+
+      const rendered = await renderNotesToPCM(notes, { ...getCurrentRenderOptions(), polyphony: 4 });
+      state.midiData = null;
+      rebuildChannelInstrumentPanel(null);
+      state.renderedPCM = rendered;
+      state.currentIrPreview = rendered.irPreview || null;
+      state.dryPCM = rendered.dryPCM;
+      state.processedLeft = rendered.leftPCM;
+      state.processedRight = rendered.rightPCM;
+      state.renderedAudioBuffer = pcmToAudioBuffer(rendered);
+      state.pauseOffset = 0;
+      ui.seekSlider.disabled = false;
+      ui.playBtn.disabled = false;
+      ui.downloadWavBtn.disabled = false;
+      ui.stopBtn.disabled = false;
+      drawOverviewWaveform(rendered.dryPCM);
+      drawCurrentWaveform();
+      drawLissajous();
+      initSpectrogram();
+      drawControlGraphs();
+      ui.playTimeText.textContent = `0:00.0 / ${secText(rendered.durationSec)}`;
+      setStatus('テスト音のレンダリング完了。再生できます');
+      playRendered();
+    } catch (err) {
+      console.error(err);
+      setStatus(`エラー: ${err.message}`);
+    }
+  }
+
+  ui.midiFileInput.addEventListener('change', async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    state.midiArrayBuffer = await file.arrayBuffer();
+    ui.fileName.textContent = file.name;
+    state.renderedPCM = null;
+    state.renderedAudioBuffer = null;
+    ui.downloadWavBtn.disabled = true;
+    stopPlayback(true);
+    clearLiveVisuals();
+    ui.progressText.textContent = '0%';
+
+    try {
+      const parsed = parseMidi(state.midiArrayBuffer);
+      state.midiData = parsed;
+      rebuildChannelInstrumentPanel(parsed);
+      setVisualNotes(parsed.notes);
+      ui.noteCount.textContent = String(parsed.notes.length);
+      ui.durationText.textContent = secText(parsed.durationSec);
+      ui.tempoText.textContent = `${parsed.bpm.toFixed(1)} BPM`;
+      setStatus('MIDIを読み込みました。ピアノロールを確認してレンダリングしてください');
+    } catch (err) {
+      console.error(err);
+      state.midiData = null;
+      rebuildChannelInstrumentPanel(null);
+      setVisualNotes([]);
+      ui.noteCount.textContent = '-';
+      ui.durationText.textContent = '-';
+      ui.tempoText.textContent = '-';
+      setStatus(`MIDI解析エラー: ${err.message}`);
+    }
+  });
+
+  ui.renderBtn.addEventListener('click', handleRender);
+  ui.playBtn.addEventListener('click', playRendered);
+  ui.downloadWavBtn.addEventListener('click', downloadRenderedWav);
+  ui.pauseBtn.addEventListener('click', pauseRendered);
+  ui.stopBtn.addEventListener('click', () => {
+    stopPlayback(true);
+    clearLiveVisuals();
+    if (state.renderedAudioBuffer) {
+      ui.playTimeText.textContent = `0:00.0 / ${secText(state.renderedAudioBuffer.duration)}`;
+    }
+    setStatus('停止');
+  });
+  ui.testToneBtn.addEventListener('click', handleTestTone);
+
+  ui.pianoRollCanvas.addEventListener('click', seekFromPianoRoll);
+
+  ui.seekSlider.addEventListener('input', () => {
+    if (!state.renderedAudioBuffer) return;
+    const dur = state.renderedAudioBuffer.duration;
+    state.pauseOffset = (parseInt(ui.seekSlider.value, 10) / 1000) * dur;
+    ui.playTimeText.textContent = `${secText(state.pauseOffset)} / ${secText(dur)}`;
+    drawCurrentWaveform();
+    drawLissajous();
+    drawPianoRoll(state.pauseOffset);
+    syncKeyboardHighlights(state.pauseOffset);
+    if (state.isPlaying) playRendered();
+  });
+
+  ui.instrumentSelect.addEventListener('change', () => {
+    buildMiniKeyboard();
+  rebuildChannelInstrumentPanel(null);
+  applyPresetToControls();
+    updateFormula();
+  });
+  ui.dutySelect.addEventListener('change', () => {
+    if (ui.instrumentSelect.value === 'famicom') applyPresetToControls();
+    updateFormula();
+  });
+  [ui.attackSlider, ui.decaySlider, ui.sustainSlider, ui.releaseSlider, ui.cutoffSlider, ui.filterPassesSelect, ui.spaceMixSlider, ui.delayMsSlider, ui.feedbackSlider, ui.densitySlider, ui.lissajousModeSelect, ui.modTargetSelect, ui.modRateSlider, ui.modDepthSlider, ui.velToCutoffSlider, ui.driveSlider, ui.chorusMixSlider, ui.chorusDepthSlider, ui.chorusRateSlider, ui.drumMixSlider, ui.convMixSlider, ui.convLengthSlider, ui.convPredelaySlider, ui.convDampingSlider, ui.resonanceSlider, ui.filterEnvAmountSlider, ui.filterEnvDecaySlider, ui.modWaveformSelect, ui.fmRatioSlider, ui.fmIndexSlider, ui.wavetableSelect, ui.windowFunctionSelect, ui.oversampleSelect, ui.compThresholdSlider, ui.compRatioSlider, ui.compMakeupSlider, ui.eqFreqSlider, ui.eqGainSlider, ui.eqQSlider, ui.phaseModeSelect].forEach(el => {
+    el.addEventListener('input', () => {
+      updateControlDisplays();
+      updateFormula();
+      if (state.renderedAudioBuffer) {
+        drawCurrentWaveform();
+        drawLissajous();
+      }
+    });
+    el.addEventListener('change', () => {
+      updateControlDisplays();
+      updateFormula();
+      if (state.renderedAudioBuffer) {
+        drawCurrentWaveform();
+        drawLissajous();
+      }
+    });
+  });
+  ui.volumeSlider.addEventListener('input', () => {
+    if (state.gainNode) state.gainNode.gain.value = parseFloat(ui.volumeSlider.value);
+  });
+
+  if (ui.windowPreviewSelect) {
+    ui.windowPreviewSelect.addEventListener('input', () => {
+      syncWindowSelectors('preview');
+      updateControlDisplays();
+      updateFormula();
+      drawControlGraphs();
+    });
+    ui.windowPreviewSelect.addEventListener('change', () => {
+      syncWindowSelectors('preview');
+      updateControlDisplays();
+      updateFormula();
+      drawControlGraphs();
+    });
+  }
+
+  if (ui.windowFunctionSelect) {
+    ui.windowFunctionSelect.addEventListener('input', () => {
+      syncWindowSelectors('analysis');
+      updateControlDisplays();
+      updateFormula();
+      drawControlGraphs();
+    });
+    ui.windowFunctionSelect.addEventListener('change', () => {
+      syncWindowSelectors('analysis');
+      updateControlDisplays();
+      updateFormula();
+      drawControlGraphs();
+    });
+  }
+
+  ui.channelInstrumentPanel.addEventListener('change', () => {
+    updateFormula();
+  });
+
+  buildMiniKeyboard();
+  rebuildChannelInstrumentPanel(null);
+  applyPresetToControls();
+  updateFormula();
+  initSpectrogram();
+  drawControlGraphs();
+  setVisualNotes([]);
+  clearLiveVisuals();
+  setStatus('MIDIを選んでください');
+  </script>
+</body>
+</html>
